@@ -3,7 +3,7 @@ const db = require('../db/connection');
 // Get available sessions
 const getAvailableSessions = async (req, res) => {
     try {
-        const { studentId } = req.query;
+        const { studentId, courseId, dayOfWeek } = req.query;
 
         let query = `
       SELECT
@@ -29,16 +29,32 @@ const getAvailableSessions = async (req, res) => {
       WHERE c.CourseStatus = 'active'`;
 
         const params = [];
+        let paramIndex = 1;
 
         // If studentId provided, exclude already enrolled sessions
         if (studentId) {
             query += `
         AND s.SessionID NOT IN (
           SELECT SessionID FROM SessionEnrollment
-          WHERE StudentID = $1
+          WHERE StudentID = $${paramIndex}
           AND EnrollmentStatus IN ('active', 'waitlisted')
         )`;
             params.push(studentId);
+            paramIndex++;
+        }
+
+        // Filter by course
+        if (courseId) {
+            query += ` AND c.CourseID = $${paramIndex}`;
+            params.push(courseId);
+            paramIndex++;
+        }
+
+        // Filter by day of week
+        if (dayOfWeek) {
+            query += ` AND s.SessionDayOfWeek = $${paramIndex}`;
+            params.push(dayOfWeek);
+            paramIndex++;
         }
 
         query += ' ORDER BY c.CourseName, s.SessionDayOfWeek, s.SessionStartTime';

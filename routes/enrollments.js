@@ -1,17 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const enrollmentController = require('../controllers/enrollmentController');
+const { verifyToken } = require('../middleware/auth');
 
-// Debug: Check what's imported
-console.log('Imported controller functions:', Object.keys(enrollmentController));
-
-// GET /api/enrollments/stats - FIRST
+// Public route - get enrollment statistics
 router.get('/stats', enrollmentController.getEnrollmentStats);
 
-// POST /api/enrollments
-router.post('/', enrollmentController.createEnrollment);
-
-// PUT /api/enrollments/:enrollmentId/withdraw
-router.put('/:enrollmentId/withdraw', enrollmentController.withdrawEnrollment);
+// Protected routes - require authentication
+router.post('/', verifyToken, enrollmentController.createEnrollment);
+router.put('/:enrollmentId/withdraw', verifyToken, enrollmentController.withdrawEnrollment);
 
 module.exports = router;

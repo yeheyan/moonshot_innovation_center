@@ -1,24 +1,21 @@
 const db = require('../db/connection');
 
-// Get all students for a parent
-const getStudentsByParent = async (req, res) => {
+// Get students by parent (userId from User_Account)
+exports.getStudentsByParent = async (req, res) => {
     try {
         const { userId } = req.params;
 
         const result = await db.query(
             `SELECT
-        s.StudentID as student_id,
-        s.StudentName as student_name,
-        s.StudentBirthDate as birth_date,
-        s.StudentGrade as grade,
-        s.StudentSchool as school,
-        COUNT(se.EnrollmentID) as total_enrollments,
-        COUNT(CASE WHEN se.EnrollmentStatus = 'active' THEN 1 END) as active_enrollments
-      FROM Student s
-      LEFT JOIN SessionEnrollment se ON s.StudentID = se.StudentID
-      WHERE s.UserID = $1
-      GROUP BY s.StudentID
-      ORDER BY s.StudentName`,
+        StudentID,
+        StudentName,
+        StudentEmail,
+        StudentPhone,
+        StudentWechat,
+        StudentAddress
+      FROM Student
+      WHERE UserID = $1
+      ORDER BY StudentID DESC`,
             [userId]
         );
 
@@ -27,6 +24,7 @@ const getStudentsByParent = async (req, res) => {
             count: result.rows.length,
             data: result.rows
         });
+
     } catch (error) {
         console.error('Error fetching students:', error);
         res.status(500).json({
@@ -36,25 +34,26 @@ const getStudentsByParent = async (req, res) => {
     }
 };
 
-// Add new student
-const addStudent = async (req, res) => {
+// Add a student under a parent
+exports.addStudent = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { name, birthDate, grade, school, medicalInfo } = req.body;
+        const { studentName, studentEmail, studentPhone, studentWechat, studentAddress } = req.body;
 
-        // Validation
-        if (!name || !birthDate) {
+        // Validate required fields
+        if (!studentName) {
             return res.status(400).json({
                 success: false,
-                error: 'Name and birth date are required'
+                error: 'Student name is required'
             });
         }
 
         const result = await db.query(
-            `INSERT INTO Student (UserID, StudentName, StudentBirthDate, StudentGrade, StudentSchool, MedicalInfo)
-      VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO Student (
+        UserID, StudentName, StudentEmail, StudentPhone, StudentWechat, StudentAddress
+      ) VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *`,
-            [userId, name, birthDate, grade, school, medicalInfo]
+            [userId, studentName, studentEmail || null, studentPhone || null, studentWechat || null, studentAddress || null]
         );
 
         res.status(201).json({
@@ -62,6 +61,7 @@ const addStudent = async (req, res) => {
             message: 'Student added successfully',
             data: result.rows[0]
         });
+
     } catch (error) {
         console.error('Error adding student:', error);
         res.status(500).json({
@@ -71,28 +71,31 @@ const addStudent = async (req, res) => {
     }
 };
 
-// Get student enrollment history
-const getStudentEnrollments = async (req, res) => {
+// Get student's enrollments with session details
+exports.getStudentEnrollments = async (req, res) => {
     try {
         const { studentId } = req.params;
 
         const result = await db.query(
             `SELECT
-        se.EnrollmentID as enrollment_id,
-        se.EnrollmentStatus as status,
-        se.EnrollmentDate as enrollment_date,
-        s.SessionName as session_name,
-        s.SessionDayOfWeek as day_of_week,
-        s.SessionStartTime as start_time,
-        s.SessionEndTime as end_time,
-        c.CourseName as course_name,
-        t.TeacherName as teacher_name,
-        ot.OrderTotal as amount_paid
+        se.EnrollmentID,
+        se.EnrollmentStatus,
+        se.EnrollmentDate,
+        s.SessionID,
+        s.SessionName,
+        s.SessionDayOfWeek,
+        s.SessionStartTime,
+        s.SessionEndTime,
+        c.CourseID,
+        c.CourseName,
+        c.CourseDescription,
+        c.CoursePrice,
+        t.TeacherName,
+        t.TeacherInfo
       FROM SessionEnrollment se
       JOIN Session s ON se.SessionID = s.SessionID
       JOIN Course c ON s.CourseID = c.CourseID
       JOIN Teacher t ON s.TeacherID = t.TeacherID
-      LEFT JOIN Order_Transaction ot ON se.OrderID = ot.OrderID
       WHERE se.StudentID = $1
       ORDER BY se.EnrollmentDate DESC`,
             [studentId]
@@ -103,6 +106,7 @@ const getStudentEnrollments = async (req, res) => {
             count: result.rows.length,
             data: result.rows
         });
+
     } catch (error) {
         console.error('Error fetching enrollments:', error);
         res.status(500).json({
@@ -110,10 +114,4 @@ const getStudentEnrollments = async (req, res) => {
             error: error.message
         });
     }
-};
-
-module.exports = {
-    getStudentsByParent,
-    addStudent,
-    getStudentEnrollments
 };
