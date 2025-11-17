@@ -1,0 +1,463 @@
+import React, { useState, useEffect } from 'react';
+import './App.css';
+import api from './services/api';
+
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('students');
+  const [students, setStudents] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // Check if user is logged in on app load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+
+    if (token && user) {
+      setIsAuthenticated(true);
+      setCurrentUser(JSON.parse(user));
+    }
+  }, []);
+
+  // Fetch students when user logs in
+  useEffect(() => {
+    if (currentUser) {
+      fetchStudents();
+      fetchSessions();
+    }
+  }, [currentUser]);
+
+  const fetchStudents = async () => {
+    if (!currentUser) return;
+    setLoading(true);
+    try {
+      const response = await api.getStudentsByParent(currentUser.userId);
+      setStudents(response.data.data);
+    } catch (error) {
+      setMessage('Error fetching students: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  const fetchSessions = async () => {
+    setLoading(true);
+    try {
+      const response = await api.getSessions();
+      setSessions(response.data.data);
+    } catch (error) {
+      setMessage('Error fetching sessions: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setStudents([]);
+    setSessions([]);
+  };
+
+  const addStudent = async (studentData) => {
+    try {
+      await api.addStudent(currentUser.userId, studentData);
+      setMessage('Student added successfully!');
+      fetchStudents();
+      return true;
+    } catch (error) {
+      setMessage('Error: ' + (error.response?.data?.error || error.message));
+      return false;
+    }
+  };
+
+  const enrollStudent = async (studentId, sessionId) => {
+    try {
+      await api.createEnrollment({ studentId, sessionId });
+      setMessage('Enrolled successfully!');
+      fetchStudents();
+      fetchSessions();
+      return true;
+    } catch (error) {
+      setMessage('Error: ' + (error.response?.data?.error || error.message));
+      return false;
+    }
+  };
+
+  // If not logged in, show login page
+  if (!isAuthenticated) {
+    return <LoginPage onLoginSuccess={(user) => {
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+    }} />;
+  }
+
+  // Main app interface
+  return (
+    <div className="App">
+      <header className="App-header">
+        <div className="header-content">
+          <h1>🚀 Moonshot Innovation Center</h1>
+          <div className="user-info">
+            <span>Welcome, {currentUser?.userName}!</span>
+            <button onClick={handleLogout}>Logout</button>
+          </div>
+        </div>
+      </header>
+
+      {message && (
+        <div className={`message ${message.startsWith('Error') ? 'error' : 'success'}`}>
+          {message}
+          <button onClick={() => setMessage('')}>✕</button>
+        </div>
+      )}
+
+      <div className="tabs">
+        <button
+          className={activeTab === 'students' ? 'active' : ''}
+          onClick={() => setActiveTab('students')}
+        >
+          👦 My Children
+        </button>
+        <button
+          className={activeTab === 'sessions' ? 'active' : ''}
+          onClick={() => setActiveTab('sessions')}
+        >
+          📚 Available Sessions
+        </button>
+        <button
+          className={activeTab === 'enrollments' ? 'active' : ''}
+          onClick={() => setActiveTab('enrollments')}
+        >
+          📋 My Enrollments
+        </button>
+      </div>
+
+      <main className="content">
+        {loading && <div className="loading">Loading...</div>}
+
+        {activeTab === 'students' && (
+          <StudentsTab students={students} onAddStudent={addStudent} />
+        )}
+
+        {activeTab === 'sessions' && (
+          <SessionsTab
+            sessions={sessions}
+            students={students}
+            onEnroll={enrollStudent}
+          />
+        )}
+
+        {activeTab === 'enrollments' && (
+          <EnrollmentsTab students={students} />
+        )}
+      </main>
+    </div>
+  );
+}
+
+// ==================== STUDENTS TAB ====================
+function StudentsTab({ students, onAddStudent }) {
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    studentName: '',
+    studentPhone: '',
+    studentWechat: ''
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const success = await onAddStudent(formData);
+    if (success) {
+      setFormData({ studentName: '', studentPhone: '', studentWechat: '' });
+      setShowForm(false);
+    }
+  };
+
+  return (
+    <div className="students-tab">
+      <div className="tab-header">
+        <h2>My Children</h2>
+        <button onClick={() => setShowForm(!showForm)}>
+          {showForm ? 'Cancel' : '+ Add Child'}
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="student-form">
+          <input
+            type="text"
+            placeholder="Child's Name"
+            value={formData.studentName}
+            onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
+            required
+          />
+          <input
+            type="tel"
+            placeholder="Phone (optional)"
+            value={formData.studentPhone}
+            onChange={(e) => setFormData({ ...formData, studentPhone: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="WeChat (optional)"
+            value={formData.studentWechat}
+            onChange={(e) => setFormData({ ...formData, studentWechat: e.target.value })}
+          />
+          <button type="submit">Add Child</button>
+        </form>
+      )}
+
+      <div className="students-list">
+        {students.length === 0 ? (
+          <p>No children added yet. Click "Add Child" to get started.</p>
+        ) : (
+          students.map(student => (
+            <div key={student.studentid} className="student-card">
+              <h3>{student.studentname}</h3>
+              {student.studentphone && <p>📱 {student.studentphone}</p>}
+              {student.studentwechat && <p>💬 {student.studentwechat}</p>}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================== SESSIONS TAB ====================
+function SessionsTab({ sessions, students, onEnroll }) {
+  const [selectedStudent, setSelectedStudent] = useState('');
+  const [enrolling, setEnrolling] = useState(null);
+
+  const handleEnroll = async (sessionId) => {
+    if (!selectedStudent) {
+      alert('Please select a student first');
+      return;
+    }
+    setEnrolling(sessionId);
+    await onEnroll(selectedStudent, sessionId);
+    setEnrolling(null);
+  };
+
+  return (
+    <div className="sessions-tab">
+      <h2>Available Sessions</h2>
+
+      {students.length > 0 && (
+        <div className="student-selector">
+          <label>Select child to enroll:</label>
+          <select
+            value={selectedStudent}
+            onChange={(e) => setSelectedStudent(e.target.value)}
+          >
+            <option value="">-- Choose a child --</option>
+            {students.map(s => (
+              <option key={s.studentid} value={s.studentid}>
+                {s.studentname}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <div className="sessions-list">
+        {sessions.length === 0 ? (
+          <p>No sessions available at the moment.</p>
+        ) : (
+          sessions.map(session => (
+            <div key={session.session_id} className="session-card">
+              <h3>{session.course_name}</h3>
+              <p className="session-name">{session.session_name}</p>
+              <p>{session.course_description}</p>
+              <div className="session-details">
+                <span>👨‍🏫 {session.teacher_name}</span>
+                <span>📅 {session.day_of_week}</span>
+                <span>🕐 {session.start_time} - {session.end_time}</span>
+                <span>💰 ¥{session.price}</span>
+                <span className={session.status === 'available' ? 'available' : 'full'}>
+                  {session.available_spots} spots available
+                </span>
+              </div>
+              <button
+                onClick={() => handleEnroll(session.session_id)}
+                disabled={!selectedStudent || enrolling === session.session_id || session.status !== 'available'}
+              >
+                {enrolling === session.session_id ? 'Enrolling...' : 'Enroll'}
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ==================== ENROLLMENTS TAB ====================
+function EnrollmentsTab({ students }) {
+  const [enrollments, setEnrollments] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchAllEnrollments();
+  }, [students]);
+
+  const fetchAllEnrollments = async () => {
+    setLoading(true);
+    const allEnrollments = {};
+
+    for (const student of students) {
+      try {
+        const response = await api.getStudentEnrollments(student.studentid);
+        allEnrollments[student.studentid] = response.data.data;
+      } catch (error) {
+        console.error('Error fetching enrollments:', error);
+      }
+    }
+
+    setEnrollments(allEnrollments);
+    setLoading(false);
+  };
+
+  if (loading) return <div>Loading enrollments...</div>;
+
+  return (
+    <div className="enrollments-tab">
+      <h2>My Enrollments</h2>
+
+      {students.length === 0 ? (
+        <p>No children added yet.</p>
+      ) : (
+        students.map(student => (
+          <div key={student.studentid} className="student-enrollments">
+            <h3>{student.studentname}'s Enrollments</h3>
+            {enrollments[student.studentid]?.length === 0 || !enrollments[student.studentid] ? (
+              <p>No enrollments yet.</p>
+            ) : (
+              <div className="enrollments-list">
+                {enrollments[student.studentid].map(e => (
+                  <div key={e.enrollmentid} className="enrollment-card">
+                    <h4>{e.coursename}</h4>
+                    <p>{e.sessionname}</p>
+                    <span className={`status ${e.enrollmentstatus}`}>
+                      {e.enrollmentstatus}
+                    </span>
+                    <p>📅 {e.sessiondayofweek} {e.sessionstarttime} - {e.sessionendtime}</p>
+                    <p>👨‍🏫 {e.teachername}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+// ==================== LOGIN PAGE ====================
+function LoginPage({ onLoginSuccess }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [formData, setFormData] = useState({
+    userPhone: '',
+    password: '',
+    userName: '',
+    userWechat: ''
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      let response;
+      if (isLogin) {
+        response = await api.login({
+          userPhone: formData.userPhone,
+          password: formData.password
+        });
+      } else {
+        response = await api.register({
+          userName: formData.userName,
+          userPhone: formData.userPhone,
+          password: formData.password,
+          userWechat: formData.userWechat
+        });
+      }
+
+      localStorage.setItem('token', response.data.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      onLoginSuccess(response.data.data.user);
+    } catch (err) {
+      setError(err.response?.data?.error || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-box">
+        <h2>🚀 Moonshot Innovation Center</h2>
+        <h3>{isLogin ? 'Login' : 'Register'}</h3>
+
+        <form onSubmit={handleSubmit}>
+          {!isLogin && (
+            <>
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={formData.userName}
+                onChange={(e) => setFormData({ ...formData, userName: e.target.value })}
+                required
+              />
+              <input
+                type="text"
+                placeholder="WeChat ID (optional)"
+                value={formData.userWechat}
+                onChange={(e) => setFormData({ ...formData, userWechat: e.target.value })}
+              />
+            </>
+          )}
+
+          <input
+            type="tel"
+            placeholder="Phone Number"
+            value={formData.userPhone}
+            onChange={(e) => setFormData({ ...formData, userPhone: e.target.value })}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            required
+          />
+
+          {error && <div className="error">{error}</div>}
+
+          <button type="submit" disabled={loading}>
+            {loading ? 'Loading...' : (isLogin ? 'Login' : 'Register')}
+          </button>
+        </form>
+
+        <p>
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <button onClick={() => setIsLogin(!isLogin)}>
+            {isLogin ? 'Register' : 'Login'}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default App;
