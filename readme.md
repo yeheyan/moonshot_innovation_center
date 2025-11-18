@@ -145,7 +145,7 @@ Or register a new account through the UI at http://localhost:3000
 - `PUT /api/enrollments/:enrollmentId/withdraw` - Withdraw from session
 - `GET /api/enrollments/stats` - Get enrollment statistics
 
-## 🗃️ Database Schema
+## Database Schema
 
 Key tables:
 - **User_Account** - Parent/admin accounts
