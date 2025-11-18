@@ -1,24 +1,21 @@
 const db = require('../db/connection');
 
-// Get all students for a parent
-const getStudentsByParent = async (req, res) => {
+// Get students by parent (userId from User_Account)
+exports.getStudentsByParent = async (req, res) => {
     try {
         const { userId } = req.params;
 
         const result = await db.query(
             `SELECT
-        s.StudentID as student_id,
-        s.StudentName as student_name,
-        s.StudentBirthDate as birth_date,
-        s.StudentGrade as grade,
-        s.StudentSchool as school,
-        COUNT(se.EnrollmentID) as total_enrollments,
-        COUNT(CASE WHEN se.EnrollmentStatus = 'active' THEN 1 END) as active_enrollments
-      FROM Student s
-      LEFT JOIN SessionEnrollment se ON s.StudentID = se.StudentID
-      WHERE s.UserID = $1
-      GROUP BY s.StudentID
-      ORDER BY s.StudentName`,
+        StudentID,
+        StudentName,
+        StudentNationalID,
+        StudentBirthDate,
+        StudentGrade,
+        StudentSchool
+      FROM Student
+      WHERE UserID = $1
+      ORDER BY StudentID DESC`,
             [userId]
         );
 
@@ -27,6 +24,7 @@ const getStudentsByParent = async (req, res) => {
             count: result.rows.length,
             data: result.rows
         });
+
     } catch (error) {
         console.error('Error fetching students:', error);
         res.status(500).json({
@@ -36,25 +34,26 @@ const getStudentsByParent = async (req, res) => {
     }
 };
 
-// Add new student
-const addStudent = async (req, res) => {
+// Add a student under a parent
+exports.addStudent = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { name, birthDate, grade, school, medicalInfo } = req.body;
+        const { studentName, studentNationalID, studentBirthDate, studentGrade, studentSchool } = req.body;
 
-        // Validation
-        if (!name || !birthDate) {
+        // Validate required fields
+        if (!studentName) {
             return res.status(400).json({
                 success: false,
-                error: 'Name and birth date are required'
+                error: 'Student name is required'
             });
         }
 
         const result = await db.query(
-            `INSERT INTO Student (UserID, StudentName, StudentBirthDate, StudentGrade, StudentSchool, MedicalInfo)
-      VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO Student (
+        UserID, StudentName, StudentNationalID, StudentBirthDate, StudentGrade, StudentSchool
+      ) VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *`,
-            [userId, name, birthDate, grade, school, medicalInfo]
+            [userId, studentName, studentNationalID || null, studentBirthDate || null, studentGrade || null, studentSchool || null]
         );
 
         res.status(201).json({
@@ -62,6 +61,7 @@ const addStudent = async (req, res) => {
             message: 'Student added successfully',
             data: result.rows[0]
         });
+
     } catch (error) {
         console.error('Error adding student:', error);
         res.status(500).json({
@@ -71,28 +71,135 @@ const addStudent = async (req, res) => {
     }
 };
 
-// Get student enrollment history
-const getStudentEnrollments = async (req, res) => {
+// Update student information
+exports.updateStudent = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { studentName, studentNationalID, studentBirthDate, studentGrade, studentSchool } = req.body;
+
+        const result = await db.query(
+            `UPDATE Student SET
+        StudentName = COALESCE($1, StudentName),
+        StudentNationalID = COALESCE($2, StudentNationalID),
+        StudentBirthDate = COALESCE($3, StudentBirthDate),
+        StudentGrade = COALESCE($4, StudentGrade),
+        StudentSchool = COALESCE($5, StudentSchool)
+      WHERE StudentID = $6
+      RETURNING *`,
+            [studentName, studentNationalID, studentBirthDate, studentGrade, studentSchool, studentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Student not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Student updated successfully',
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Error updating student:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+// Delete student
+exports.deleteStudent = async (req, res) => {
+    const client = await db.pool.connect();
+
+    try {
+        const { studentId } = req.params;
+
+        await client.query('BEGIN');
+
+        // Check if student has active enrollments
+        const enrollmentCheck = await client.query(
+            `SELECT COUNT(*) FROM SessionEnrollment
+       WHERE StudentID = $1 AND EnrollmentStatus = 'active'`,
+            [studentId]
+        );
+
+        if (parseInt(enrollmentCheck.rows[0].count) > 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                error: 'Cannot delete student with active enrollments. Please withdraw from sessions first.'
+            });
+        }
+
+        // Delete all enrollment records (withdrawn/waitlisted)
+        await client.query(
+            'DELETE FROM SessionEnrollment WHERE StudentID = $1',
+            [studentId]
+        );
+
+        // Delete the student
+        const result = await client.query(
+            'DELETE FROM Student WHERE StudentID = $1 RETURNING *',
+            [studentId]
+        );
+
+        if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                success: false,
+                error: 'Student not found'
+            });
+        }
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: 'Student deleted successfully'
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error deleting student:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        client.release();
+    }
+};
+
+// Get student's enrollments with session details
+exports.getStudentEnrollments = async (req, res) => {
     try {
         const { studentId } = req.params;
 
         const result = await db.query(
             `SELECT
-        se.EnrollmentID as enrollment_id,
-        se.EnrollmentStatus as status,
-        se.EnrollmentDate as enrollment_date,
-        s.SessionName as session_name,
-        s.SessionDayOfWeek as day_of_week,
-        s.SessionStartTime as start_time,
-        s.SessionEndTime as end_time,
-        c.CourseName as course_name,
-        t.TeacherName as teacher_name,
-        ot.OrderTotal as amount_paid
+        se.EnrollmentID,
+        se.EnrollmentStatus,
+        se.EnrollmentDate,
+        s.SessionID,
+        s.SessionName,
+        s.SessionDayOfWeek,
+        s.SessionStartTime,
+        s.SessionEndTime,
+        s.SessionStartDate,
+        c.CourseID,
+        c.CourseName,
+        c.CourseDescription,
+        c.CoursePrice,
+        t.TeacherName,
+        t.TeacherInfo
       FROM SessionEnrollment se
       JOIN Session s ON se.SessionID = s.SessionID
       JOIN Course c ON s.CourseID = c.CourseID
       JOIN Teacher t ON s.TeacherID = t.TeacherID
-      LEFT JOIN Order_Transaction ot ON se.OrderID = ot.OrderID
       WHERE se.StudentID = $1
       ORDER BY se.EnrollmentDate DESC`,
             [studentId]
@@ -103,6 +210,7 @@ const getStudentEnrollments = async (req, res) => {
             count: result.rows.length,
             data: result.rows
         });
+
     } catch (error) {
         console.error('Error fetching enrollments:', error);
         res.status(500).json({
@@ -110,10 +218,4 @@ const getStudentEnrollments = async (req, res) => {
             error: error.message
         });
     }
-};
-
-module.exports = {
-    getStudentsByParent,
-    addStudent,
-    getStudentEnrollments
 };

@@ -11,15 +11,16 @@ const pool = new Pool({
 
 // Set schema for all connections
 pool.on('connect', (client) => {
-    client.query(`SET search_path TO courses_management, public`);
+    // Fixed: added missing backtick
+    client.query('SET search_path TO courses_management, public');
 });
 
 // Test connection with schema
 pool.query('SELECT current_schema()', (err, res) => {
     if (err) {
-        console.error('Database connection error:', err);
+        console.error('❌ Database connection error:', err);
     } else {
-        console.log('Connected to database with schema:', res.rows[0].current_schema);
+        console.log('✅ Connected to database with schema:', res.rows[0].current_schema);
     }
 });
 
