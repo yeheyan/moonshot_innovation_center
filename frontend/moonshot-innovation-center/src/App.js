@@ -164,15 +164,23 @@ function StudentsTab({ students, onAddStudent }) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     studentName: '',
-    studentPhone: '',
-    studentWechat: ''
+    studentNationalID: '',
+    studentBirthDate: '',
+    studentGrade: '',
+    studentSchool: ''
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const success = await onAddStudent(formData);
     if (success) {
-      setFormData({ studentName: '', studentPhone: '', studentWechat: '' });
+      setFormData({
+        studentName: '',
+        studentNationalID: '',
+        studentBirthDate: '',
+        studentGrade: '',
+        studentSchool: ''
+      });
       setShowForm(false);
     }
   };
@@ -190,22 +198,34 @@ function StudentsTab({ students, onAddStudent }) {
         <form onSubmit={handleSubmit} className="student-form">
           <input
             type="text"
-            placeholder="Child's Name"
+            placeholder="Child's Name *"
             value={formData.studentName}
             onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
             required
           />
           <input
-            type="tel"
-            placeholder="Phone (optional)"
-            value={formData.studentPhone}
-            onChange={(e) => setFormData({ ...formData, studentPhone: e.target.value })}
+            type="text"
+            placeholder="National ID (optional)"
+            value={formData.studentNationalID}
+            onChange={(e) => setFormData({ ...formData, studentNationalID: e.target.value })}
+          />
+          <input
+            type="date"
+            placeholder="Birth Date"
+            value={formData.studentBirthDate}
+            onChange={(e) => setFormData({ ...formData, studentBirthDate: e.target.value })}
           />
           <input
             type="text"
-            placeholder="WeChat (optional)"
-            value={formData.studentWechat}
-            onChange={(e) => setFormData({ ...formData, studentWechat: e.target.value })}
+            placeholder="Grade (optional)"
+            value={formData.studentGrade}
+            onChange={(e) => setFormData({ ...formData, studentGrade: e.target.value })}
+          />
+          <input
+            type="text"
+            placeholder="School (optional)"
+            value={formData.studentSchool}
+            onChange={(e) => setFormData({ ...formData, studentSchool: e.target.value })}
           />
           <button type="submit">Add Child</button>
         </form>
@@ -218,8 +238,11 @@ function StudentsTab({ students, onAddStudent }) {
           students.map(student => (
             <div key={student.studentid} className="student-card">
               <h3>{student.studentname}</h3>
-              {student.studentphone && <p>📱 {student.studentphone}</p>}
-              {student.studentwechat && <p>💬 {student.studentwechat}</p>}
+              {student.studentgrade && <p>📚 Grade: {student.studentgrade}</p>}
+              {student.studentschool && <p>🏫 {student.studentschool}</p>}
+              {student.studentbirthdate && (
+                <p>🎂 {new Date(student.studentbirthdate).toLocaleDateString()}</p>
+              )}
             </div>
           ))
         )}
