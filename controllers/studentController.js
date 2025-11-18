@@ -9,10 +9,10 @@ exports.getStudentsByParent = async (req, res) => {
             `SELECT
         StudentID,
         StudentName,
-        StudentEmail,
-        StudentPhone,
-        StudentWechat,
-        StudentAddress
+        StudentNationalID,
+        StudentBirthDate,
+        StudentGrade,
+        StudentSchool
       FROM Student
       WHERE UserID = $1
       ORDER BY StudentID DESC`,
@@ -38,7 +38,7 @@ exports.getStudentsByParent = async (req, res) => {
 exports.addStudent = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { studentName, studentEmail, studentPhone, studentWechat, studentAddress } = req.body;
+        const { studentName, studentNationalID, studentBirthDate, studentGrade, studentSchool } = req.body;
 
         // Validate required fields
         if (!studentName) {
@@ -50,10 +50,10 @@ exports.addStudent = async (req, res) => {
 
         const result = await db.query(
             `INSERT INTO Student (
-        UserID, StudentName, StudentEmail, StudentPhone, StudentWechat, StudentAddress
+        UserID, StudentName, StudentNationalID, StudentBirthDate, StudentGrade, StudentSchool
       ) VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *`,
-            [userId, studentName, studentEmail || null, studentPhone || null, studentWechat || null, studentAddress || null]
+            [userId, studentName, studentNationalID || null, studentBirthDate || null, studentGrade || null, studentSchool || null]
         );
 
         res.status(201).json({
@@ -68,6 +68,109 @@ exports.addStudent = async (req, res) => {
             success: false,
             error: error.message
         });
+    }
+};
+
+// Update student information
+exports.updateStudent = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { studentName, studentNationalID, studentBirthDate, studentGrade, studentSchool } = req.body;
+
+        const result = await db.query(
+            `UPDATE Student SET
+        StudentName = COALESCE($1, StudentName),
+        StudentNationalID = COALESCE($2, StudentNationalID),
+        StudentBirthDate = COALESCE($3, StudentBirthDate),
+        StudentGrade = COALESCE($4, StudentGrade),
+        StudentSchool = COALESCE($5, StudentSchool)
+      WHERE StudentID = $6
+      RETURNING *`,
+            [studentName, studentNationalID, studentBirthDate, studentGrade, studentSchool, studentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Student not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Student updated successfully',
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Error updating student:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+// Delete student
+exports.deleteStudent = async (req, res) => {
+    const client = await db.pool.connect();
+
+    try {
+        const { studentId } = req.params;
+
+        await client.query('BEGIN');
+
+        // Check if student has active enrollments
+        const enrollmentCheck = await client.query(
+            `SELECT COUNT(*) FROM SessionEnrollment
+       WHERE StudentID = $1 AND EnrollmentStatus = 'active'`,
+            [studentId]
+        );
+
+        if (parseInt(enrollmentCheck.rows[0].count) > 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                error: 'Cannot delete student with active enrollments. Please withdraw from sessions first.'
+            });
+        }
+
+        // Delete all enrollment records (withdrawn/waitlisted)
+        await client.query(
+            'DELETE FROM SessionEnrollment WHERE StudentID = $1',
+            [studentId]
+        );
+
+        // Delete the student
+        const result = await client.query(
+            'DELETE FROM Student WHERE StudentID = $1 RETURNING *',
+            [studentId]
+        );
+
+        if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                success: false,
+                error: 'Student not found'
+            });
+        }
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: 'Student deleted successfully'
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error deleting student:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        client.release();
     }
 };
 
@@ -86,6 +189,7 @@ exports.getStudentEnrollments = async (req, res) => {
         s.SessionDayOfWeek,
         s.SessionStartTime,
         s.SessionEndTime,
+        s.SessionStartDate,
         c.CourseID,
         c.CourseName,
         c.CourseDescription,

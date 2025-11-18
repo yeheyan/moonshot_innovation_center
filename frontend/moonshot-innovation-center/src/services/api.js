@@ -53,6 +53,14 @@ export const addStudent = (userId, studentData) => {
   return api.post(`/students/parent/${userId}`, studentData);
 };
 
+export const updateStudent = (studentId, studentData) => {
+  return api.put(`/students/${studentId}`, studentData);
+};
+
+export const deleteStudent = (studentId) => {
+  return api.delete(`/students/${studentId}`);
+};
+
 export const getStudentEnrollments = (studentId) => {
   return api.get(`/students/${studentId}/enrollments`);
 };
@@ -92,6 +100,8 @@ export default {
   getCurrentUser,
   getStudentsByParent,
   addStudent,
+  updateStudent,
+  deleteStudent,
   getStudentEnrollments,
   getSessions,
   getSessionById,

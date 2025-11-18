@@ -74,12 +74,53 @@ function App() {
     }
   };
 
+  const updateStudent = async (studentId, studentData) => {
+    try {
+      await api.updateStudent(studentId, studentData);
+      setMessage('Student updated successfully!');
+      fetchStudents();
+      return true;
+    } catch (error) {
+      setMessage('Error: ' + (error.response?.data?.error || error.message));
+      return false;
+    }
+  };
+
+  const deleteStudent = async (studentId, studentName) => {
+    if (!window.confirm(`Are you sure you want to delete ${studentName}?`)) {
+      return false;
+    }
+    try {
+      await api.deleteStudent(studentId);
+      setMessage('Student deleted successfully!');
+      fetchStudents();
+      return true;
+    } catch (error) {
+      setMessage('Error: ' + (error.response?.data?.error || error.message));
+      return false;
+    }
+  };
+
   const enrollStudent = async (studentId, sessionId) => {
     try {
       await api.createEnrollment({ studentId, sessionId });
       setMessage('Enrolled successfully!');
       fetchStudents();
       fetchSessions();
+      return true;
+    } catch (error) {
+      setMessage('Error: ' + (error.response?.data?.error || error.message));
+      return false;
+    }
+  };
+
+  const withdrawEnrollment = async (enrollmentId, sessionName) => {
+    if (!window.confirm(`Are you sure you want to withdraw from "${sessionName}"?`)) {
+      return false;
+    }
+    try {
+      await api.withdrawEnrollment(enrollmentId);
+      setMessage('Withdrawn successfully!');
       return true;
     } catch (error) {
       setMessage('Error: ' + (error.response?.data?.error || error.message));
@@ -140,7 +181,12 @@ function App() {
         {loading && <div className="loading">Loading...</div>}
 
         {activeTab === 'students' && (
-          <StudentsTab students={students} onAddStudent={addStudent} />
+          <StudentsTab
+            students={students}
+            onAddStudent={addStudent}
+            onUpdateStudent={updateStudent}
+            onDeleteStudent={deleteStudent}
+          />
         )}
 
         {activeTab === 'sessions' && (
@@ -152,7 +198,10 @@ function App() {
         )}
 
         {activeTab === 'enrollments' && (
-          <EnrollmentsTab students={students} />
+          <EnrollmentsTab
+            students={students}
+            onWithdraw={withdrawEnrollment}
+          />
         )}
       </main>
     </div>
@@ -160,8 +209,9 @@ function App() {
 }
 
 // ==================== STUDENTS TAB ====================
-function StudentsTab({ students, onAddStudent }) {
+function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent }) {
   const [showForm, setShowForm] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
   const [formData, setFormData] = useState({
     studentName: '',
     studentNationalID: '',
@@ -170,9 +220,27 @@ function StudentsTab({ students, onAddStudent }) {
     studentSchool: ''
   });
 
+  const handleEdit = (student) => {
+    setEditingStudent(student);
+    setFormData({
+      studentName: student.studentname,
+      studentNationalID: student.studentnationalid || '',
+      studentBirthDate: student.studentbirthdate ? student.studentbirthdate.split('T')[0] : '',
+      studentGrade: student.studentgrade || '',
+      studentSchool: student.studentschool || ''
+    });
+    setShowForm(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = await onAddStudent(formData);
+    let success;
+    if (editingStudent) {
+      success = await onUpdateStudent(editingStudent.studentid, formData);
+    } else {
+      success = await onAddStudent(formData);
+    }
+
     if (success) {
       setFormData({
         studentName: '',
@@ -182,23 +250,37 @@ function StudentsTab({ students, onAddStudent }) {
         studentSchool: ''
       });
       setShowForm(false);
+      setEditingStudent(null);
     }
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      studentName: '',
+      studentNationalID: '',
+      studentBirthDate: '',
+      studentGrade: '',
+      studentSchool: ''
+    });
+    setShowForm(false);
+    setEditingStudent(null);
   };
 
   return (
     <div className="students-tab">
       <div className="tab-header">
-        <h2>My Children</h2>
-        <button onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancel' : '+ Add Child'}
-        </button>
+        <h2>My Learners</h2>
+        {!showForm && (
+          <button onClick={() => setShowForm(true)}>+ Add Child</button>
+        )}
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="student-form">
+          <h3>{editingStudent ? 'Edit Learner' : 'Add Learner'}</h3>
           <input
             type="text"
-            placeholder="Child's Name *"
+            placeholder="Learner's Name *"
             value={formData.studentName}
             onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
             required
@@ -227,7 +309,10 @@ function StudentsTab({ students, onAddStudent }) {
             value={formData.studentSchool}
             onChange={(e) => setFormData({ ...formData, studentSchool: e.target.value })}
           />
-          <button type="submit">Add Child</button>
+          <div className="form-actions">
+            <button type="submit">{editingStudent ? 'Update' : 'Add'}</button>
+            <button type="button" onClick={handleCancel}>Cancel</button>
+          </div>
         </form>
       )}
 
@@ -237,12 +322,25 @@ function StudentsTab({ students, onAddStudent }) {
         ) : (
           students.map(student => (
             <div key={student.studentid} className="student-card">
-              <h3>{student.studentname}</h3>
-              {student.studentgrade && <p>📚 Grade: {student.studentgrade}</p>}
-              {student.studentschool && <p>🏫 {student.studentschool}</p>}
-              {student.studentbirthdate && (
-                <p> {new Date(student.studentbirthdate).toLocaleDateString()}</p>
-              )}
+              <div className="student-info">
+                <h3>{student.studentname}</h3>
+                {student.studentgrade && <p> Grade: {student.studentgrade}</p>}
+                {student.studentschool && <p> School: {student.studentschool}</p>}
+                {student.studentbirthdate && (
+                  <p> Birth Date: {new Date(student.studentbirthdate).toLocaleDateString()}</p>
+                )}
+              </div>
+              <div className="student-actions">
+                <button onClick={() => handleEdit(student)} className="edit-btn">
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={() => onDeleteStudent(student.studentid, student.studentname)}
+                  className="delete-btn"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -297,10 +395,10 @@ function SessionsTab({ sessions, students, onEnroll }) {
               <p className="session-name">{session.session_name}</p>
               <p>{session.course_description}</p>
               <div className="session-details">
-                <span>{session.teacher_name}</span>
-                <span>{session.day_of_week}</span>
-                <span>{session.start_time} - {session.end_time}</span>
-                <span>¥{session.price}</span>
+                <span> Teacher: {session.teacher_name}</span>
+                <span> Day: {session.day_of_week}</span>
+                <span> Time: {session.start_time} - {session.end_time}</span>
+                <span> Price: ¥{session.price}</span>
                 <span className={session.status === 'available' ? 'available' : 'full'}>
                   {session.available_spots} spots available
                 </span>
@@ -320,9 +418,10 @@ function SessionsTab({ sessions, students, onEnroll }) {
 }
 
 // ==================== ENROLLMENTS TAB ====================
-function EnrollmentsTab({ students }) {
+function EnrollmentsTab({ students, onWithdraw }) {
   const [enrollments, setEnrollments] = useState({});
   const [loading, setLoading] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(null);
 
   useEffect(() => {
     fetchAllEnrollments();
@@ -345,6 +444,22 @@ function EnrollmentsTab({ students }) {
     setLoading(false);
   };
 
+  const handleWithdraw = async (enrollmentId, sessionName) => {
+    setWithdrawing(enrollmentId);
+    const success = await onWithdraw(enrollmentId, sessionName);
+    if (success) {
+      fetchAllEnrollments();
+    }
+    setWithdrawing(null);
+  };
+
+  const calculateDaysUntil = (sessionStartDate) => {
+    const now = new Date();
+    const start = new Date(sessionStartDate);
+    const days = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
+    return days;
+  };
+
   if (loading) return <div>Loading enrollments...</div>;
 
   return (
@@ -361,17 +476,45 @@ function EnrollmentsTab({ students }) {
               <p>No enrollments yet.</p>
             ) : (
               <div className="enrollments-list">
-                {enrollments[student.studentid].map(e => (
-                  <div key={e.enrollmentid} className="enrollment-card">
-                    <h4>{e.coursename}</h4>
-                    <p>{e.sessionname}</p>
-                    <span className={`status ${e.enrollmentstatus}`}>
-                      {e.enrollmentstatus}
-                    </span>
-                    <p>{e.sessiondayofweek} {e.sessionstarttime} - {e.sessionendtime}</p>
-                    <p>{e.teachername}</p>
-                  </div>
-                ))}
+                {enrollments[student.studentid].map(e => {
+                  const daysUntil = calculateDaysUntil(e.sessionstartdate);
+                  const canWithdraw = e.enrollmentstatus === 'active' && daysUntil >= 7;
+
+                  return (
+                    <div key={e.enrollmentid} className="enrollment-card">
+                      <div className="enrollment-info">
+                        <h4>{e.coursename}</h4>
+                        <p>{e.sessionname}</p>
+                        <span className={`status ${e.enrollmentstatus}`}>
+                          {e.enrollmentstatus}
+                        </span>
+                        <p> Day: {e.sessiondayofweek} Time: {e.sessionstarttime} - {e.sessionendtime}</p>
+                        <p> Start Date: {new Date(e.sessionstartdate).toLocaleDateString()}</p>
+                        <p> Teacher: {e.teachername}</p>
+                        {daysUntil > 0 && (
+                          <p className="days-until"> {daysUntil} days until session</p>
+                        )}
+                      </div>
+                      {e.enrollmentstatus === 'active' && (
+                        <div className="enrollment-actions">
+                          {canWithdraw ? (
+                            <button
+                              onClick={() => handleWithdraw(e.enrollmentid, e.sessionname)}
+                              disabled={withdrawing === e.enrollmentid}
+                              className="withdraw-btn"
+                            >
+                              {withdrawing === e.enrollmentid ? 'Withdrawing...' : '❌ Withdraw'}
+                            </button>
+                          ) : (
+                            <p className="no-withdraw">
+                              Cannot withdraw (less than 7 days until session)
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
