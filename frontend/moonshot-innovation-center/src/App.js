@@ -332,13 +332,13 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
               </div>
               <div className="student-actions">
                 <button onClick={() => handleEdit(student)} className="edit-btn">
-                  ✏️ Edit
+                  Edit
                 </button>
                 <button
                   onClick={() => onDeleteStudent(student.studentid, student.studentname)}
                   className="delete-btn"
                 >
-                  🗑️ Delete
+                  Delete
                 </button>
               </div>
             </div>
@@ -423,7 +423,7 @@ function SessionsTab({ sessions, students, onEnroll }) {
                 <div className="course-info">
                   <h3>{data.courseInfo.name}</h3>
                   <p className="course-description">{data.courseInfo.description}</p>
-                  <span className="course-price">💰 ¥{data.courseInfo.price}</span>
+                  <span className="course-price"> ¥{data.courseInfo.price}</span>
                   <span className="session-count">
                     {data.sessions.length} session{data.sessions.length > 1 ? 's' : ''} available
                   </span>
@@ -441,7 +441,7 @@ function SessionsTab({ sessions, students, onEnroll }) {
                         <h4>{session.session_name}</h4>
                         <div className="session-info-row">
                           <span> teacher: {session.teacher_name}</span>
-                          <span> day: {session.day_of_week}</span>
+                          <span> day of week: {session.day_of_week}</span>
                           <span> start time: {session.start_time} - {session.end_time}</span>
                         </div>
                         <span className={`availability ${session.status === 'available' ? 'available' : 'full'}`}>
