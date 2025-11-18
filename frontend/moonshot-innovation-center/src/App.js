@@ -120,19 +120,19 @@ function App() {
           className={activeTab === 'students' ? 'active' : ''}
           onClick={() => setActiveTab('students')}
         >
-          👦 My Children
+          My Learners
         </button>
         <button
           className={activeTab === 'sessions' ? 'active' : ''}
           onClick={() => setActiveTab('sessions')}
         >
-          📚 Available Sessions
+          Available Sessions
         </button>
         <button
           className={activeTab === 'enrollments' ? 'active' : ''}
           onClick={() => setActiveTab('enrollments')}
         >
-          📋 My Enrollments
+          My Enrollments
         </button>
       </div>
 
@@ -241,7 +241,7 @@ function StudentsTab({ students, onAddStudent }) {
               {student.studentgrade && <p>📚 Grade: {student.studentgrade}</p>}
               {student.studentschool && <p>🏫 {student.studentschool}</p>}
               {student.studentbirthdate && (
-                <p>🎂 {new Date(student.studentbirthdate).toLocaleDateString()}</p>
+                <p> {new Date(student.studentbirthdate).toLocaleDateString()}</p>
               )}
             </div>
           ))
@@ -297,10 +297,10 @@ function SessionsTab({ sessions, students, onEnroll }) {
               <p className="session-name">{session.session_name}</p>
               <p>{session.course_description}</p>
               <div className="session-details">
-                <span>👨‍🏫 {session.teacher_name}</span>
-                <span>📅 {session.day_of_week}</span>
-                <span>🕐 {session.start_time} - {session.end_time}</span>
-                <span>💰 ¥{session.price}</span>
+                <span>{session.teacher_name}</span>
+                <span>{session.day_of_week}</span>
+                <span>{session.start_time} - {session.end_time}</span>
+                <span>¥{session.price}</span>
                 <span className={session.status === 'available' ? 'available' : 'full'}>
                   {session.available_spots} spots available
                 </span>
@@ -368,8 +368,8 @@ function EnrollmentsTab({ students }) {
                     <span className={`status ${e.enrollmentstatus}`}>
                       {e.enrollmentstatus}
                     </span>
-                    <p>📅 {e.sessiondayofweek} {e.sessionstarttime} - {e.sessionendtime}</p>
-                    <p>👨‍🏫 {e.teachername}</p>
+                    <p>{e.sessiondayofweek} {e.sessionstarttime} - {e.sessionendtime}</p>
+                    <p>{e.teachername}</p>
                   </div>
                 ))}
               </div>
