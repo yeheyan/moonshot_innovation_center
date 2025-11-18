@@ -353,6 +353,31 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
 function SessionsTab({ sessions, students, onEnroll }) {
   const [selectedStudent, setSelectedStudent] = useState('');
   const [enrolling, setEnrolling] = useState(null);
+  const [expandedCourses, setExpandedCourses] = useState({});
+
+  // Group sessions by course
+  const groupedSessions = sessions.reduce((acc, session) => {
+    const courseName = session.course_name;
+    if (!acc[courseName]) {
+      acc[courseName] = {
+        courseInfo: {
+          name: courseName,
+          description: session.course_description,
+          price: session.price
+        },
+        sessions: []
+      };
+    }
+    acc[courseName].sessions.push(session);
+    return acc;
+  }, {});
+
+  const toggleCourse = (courseName) => {
+    setExpandedCourses(prev => ({
+      ...prev,
+      [courseName]: !prev[courseName]
+    }));
+  };
 
   const handleEnroll = async (sessionId) => {
     if (!selectedStudent) {
@@ -366,7 +391,7 @@ function SessionsTab({ sessions, students, onEnroll }) {
 
   return (
     <div className="sessions-tab">
-      <h2>Available Sessions</h2>
+      <h2>Available Courses & Sessions</h2>
 
       {students.length > 0 && (
         <div className="student-selector">
@@ -385,30 +410,57 @@ function SessionsTab({ sessions, students, onEnroll }) {
         </div>
       )}
 
-      <div className="sessions-list">
-        {sessions.length === 0 ? (
-          <p>No sessions available at the moment.</p>
+      <div className="courses-list">
+        {Object.keys(groupedSessions).length === 0 ? (
+          <p>No courses available at the moment.</p>
         ) : (
-          sessions.map(session => (
-            <div key={session.session_id} className="session-card">
-              <h3>{session.course_name}</h3>
-              <p className="session-name">{session.session_name}</p>
-              <p>{session.course_description}</p>
-              <div className="session-details">
-                <span> Teacher: {session.teacher_name}</span>
-                <span> Day: {session.day_of_week}</span>
-                <span> Time: {session.start_time} - {session.end_time}</span>
-                <span> Price: ¥{session.price}</span>
-                <span className={session.status === 'available' ? 'available' : 'full'}>
-                  {session.available_spots} spots available
-                </span>
-              </div>
-              <button
-                onClick={() => handleEnroll(session.session_id)}
-                disabled={!selectedStudent || enrolling === session.session_id || session.status !== 'available'}
+          Object.entries(groupedSessions).map(([courseName, data]) => (
+            <div key={courseName} className="course-group">
+              <div
+                className="course-header"
+                onClick={() => toggleCourse(courseName)}
               >
-                {enrolling === session.session_id ? 'Enrolling...' : 'Enroll'}
-              </button>
+                <div className="course-info">
+                  <h3>{data.courseInfo.name}</h3>
+                  <p className="course-description">{data.courseInfo.description}</p>
+                  <span className="course-price">💰 ¥{data.courseInfo.price}</span>
+                  <span className="session-count">
+                    {data.sessions.length} session{data.sessions.length > 1 ? 's' : ''} available
+                  </span>
+                </div>
+                <button className="expand-btn">
+                  {expandedCourses[courseName] ? '▼' : '▶'}
+                </button>
+              </div>
+
+              {expandedCourses[courseName] && (
+                <div className="sessions-in-course">
+                  {data.sessions.map(session => (
+                    <div key={session.session_id} className="session-card-compact">
+                      <div className="session-details-compact">
+                        <h4>{session.session_name}</h4>
+                        <div className="session-info-row">
+                          <span> teacher: {session.teacher_name}</span>
+                          <span> day: {session.day_of_week}</span>
+                          <span> start time: {session.start_time} - {session.end_time}</span>
+                        </div>
+                        <span className={`availability ${session.status === 'available' ? 'available' : 'full'}`}>
+                          {session.available_spots > 0
+                            ? `${session.available_spots} spots available`
+                            : 'Full - Waitlist only'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleEnroll(session.session_id)}
+                        disabled={!selectedStudent || enrolling === session.session_id}
+                        className="enroll-btn-compact"
+                      >
+                        {enrolling === session.session_id ? 'Enrolling...' : 'Enroll'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))
         )}
