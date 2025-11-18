@@ -777,3 +777,566 @@ body {
   display: flex;
   gap: 0.5rem;
 }
+
+/* ==================== STUDENT MANAGEMENT ==================== */
+.students-management {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.search-box input {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  width: 300px;
+  transition: all 0.3s;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.students-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 1.5rem;
+  height: calc(100vh - 250px);
+}
+
+.students-list-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.students-list-panel h3 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+}
+
+.students-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.student-item {
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.student-item:hover {
+  border-color: #667eea;
+  background: white;
+}
+
+.student-item.selected {
+  border-color: #667eea;
+  background: #edf2f7;
+}
+
+.student-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.student-item-header h4 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1rem;
+}
+
+.enrollment-badge {
+  background: #bee3f8;
+  color: #2c5282;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.student-item-details {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.student-item-details p {
+  margin: 0.25rem 0;
+}
+
+/* ==================== STUDENT DETAILS PANEL ==================== */
+.student-details-panel {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.details-panel {
+  height: 100%;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.details-header h3 {
+  margin: 0;
+  color: #2d3748;
+}
+
+.btn-close {
+  background: #e2e8f0;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.3s;
+}
+
+.btn-close:hover {
+  background: #cbd5e0;
+  transform: rotate(90deg);
+}
+
+.details-section {
+  margin-bottom: 2rem;
+}
+
+.details-section h4 {
+  color: #2d3748;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-item label {
+  color: #718096;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.info-item span {
+  color: #2d3748;
+}
+
+/* ==================== ENROLLMENT ITEMS ==================== */
+.enrollments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.enrollment-item {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.enrollment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.enrollment-header h5 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1rem;
+}
+
+.enrollment-session {
+  color: #4a5568;
+  margin: 0.5rem 0;
+  font-weight: 500;
+}
+
+.enrollment-details {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: #718096;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.enrollment-date {
+  color: #718096;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 1024px) {
+  .students-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .students-list {
+    max-height: 400px;
+  }
+}
+
+/* ==================== USERS/PARENTS MANAGEMENT ==================== */
+.users-management {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.users-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 1.5rem;
+  height: calc(100vh - 250px);
+}
+
+.users-list-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.users-list-panel h3 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+}
+
+.users-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.user-item {
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.user-item:hover {
+  border-color: #667eea;
+  background: white;
+}
+
+.user-item.selected {
+  border-color: #667eea;
+  background: #edf2f7;
+}
+
+.user-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.user-item-header h4 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1rem;
+}
+
+.student-count-badge {
+  background: #c6f6d5;
+  color: #22543d;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.user-item-details {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.user-item-details p {
+  margin: 0.25rem 0;
+}
+
+.join-date {
+  font-size: 0.85rem;
+  color: #a0aec0;
+}
+
+.user-details-panel {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+
+/* ==================== CHILDREN LIST ==================== */
+.children-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.child-card {
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.child-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.child-header h5 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1rem;
+}
+
+.child-info {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.child-info p {
+  margin: 0.25rem 0;
+}
+
+/* ==================== ENROLLMENTS MANAGEMENT ==================== */
+.enrollments-management {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.enrollment-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.stat-card-small {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  border: 2px solid #e2e8f0;
+}
+
+.stat-card-small h4 {
+  margin: 0 0 0.5rem 0;
+  color: #718096;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.stat-card-small .stat-number {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.stat-card-small.active {
+  border-color: #48bb78;
+}
+
+.stat-card-small.active .stat-number {
+  color: #48bb78;
+}
+
+.stat-card-small.waitlisted {
+  border-color: #ed8936;
+}
+
+.stat-card-small.waitlisted .stat-number {
+  color: #ed8936;
+}
+
+.stat-card-small.withdrawn {
+  border-color: #a0aec0;
+}
+
+.stat-card-small.withdrawn .stat-number {
+  color: #a0aec0;
+}
+
+/* ==================== FILTERS ==================== */
+.enrollment-filters {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.filter-group select,
+.filter-group input {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s;
+}
+
+.filter-group input {
+  min-width: 300px;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.filter-info {
+  margin-left: auto;
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+/* ==================== TABLE ==================== */
+.enrollments-table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.enrollments-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.enrollments-table thead {
+  background: #f7fafc;
+}
+
+.enrollments-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #2d3748;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.enrollments-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #4a5568;
+}
+
+.enrollments-table tbody tr:hover {
+  background: #f7fafc;
+}
+
+.enrollments-table .sub-info {
+  font-size: 0.85rem;
+  color: #a0aec0;
+  margin-top: 0.25rem;
+}
+
+.empty-row {
+  text-align: center;
+  padding: 3rem;
+  color: #a0aec0;
+}
+
+.status-select {
+  padding: 0.5rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 1400px) {
+  .enrollments-table-container {
+    overflow-x: auto;
+  }
+
+  .enrollments-table {
+    min-width: 1200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .enrollment-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filter-group input {
+    min-width: 200px;
+  }
+}

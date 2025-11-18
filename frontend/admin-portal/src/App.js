@@ -752,35 +752,580 @@ function SessionForm({ session, teachers, onSubmit, onCancel }) {
     </div>
   );
 }
+function StudentsView({ setMessage }) {
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [enrollments, setEnrollments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-function StudentsView() {
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const response = await adminApi.getAllStudentsAdmin();
+      setStudents(response.data.data);
+    } catch (error) {
+      setMessage('Error fetching students: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStudentEnrollments = async (studentId) => {
+    try {
+      const response = await adminApi.getStudentEnrollments(studentId);
+      setEnrollments(response.data.data);
+    } catch (error) {
+      setMessage('Error fetching enrollments: ' + error.message);
+    }
+  };
+
+  const handleSelectStudent = (student) => {
+    setSelectedStudent(student);
+    fetchStudentEnrollments(student.studentid);
+  };
+
+  const filteredStudents = students.filter(student =>
+    student.studentname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.parent_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) return <div className="loading">Loading students...</div>;
+
   return (
-    <div className="view-placeholder">
-      <h2>👨‍🎓 Student Management</h2>
-      <p>Student management coming soon...</p>
+    <div className="students-management">
+      <div className="management-header">
+        <h2>Student Management</h2>
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="Search by student or parent name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="students-layout">
+        <div className="students-list-panel">
+          <h3>All Students ({filteredStudents.length})</h3>
+          <div className="students-list">
+            {filteredStudents.map(student => (
+              <div
+                key={student.studentid}
+                className={`student-item ${selectedStudent?.studentid === student.studentid ? 'selected' : ''}`}
+                onClick={() => handleSelectStudent(student)}
+              >
+                <div className="student-item-header">
+                  <h4>{student.studentname}</h4>
+                  <span className="enrollment-badge">
+                    {student.enrollment_count} enrollments
+                  </span>
+                </div>
+                <div className="student-item-details">
+                  <p>Parent: {student.parent_name || 'N/A'}</p>
+                  {student.studentgrade && <p>Grade: {student.studentgrade}</p>}
+                  {student.studentschool && <p>School: {student.studentschool}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {selectedStudent && (
+          <div className="student-details-panel">
+            <StudentDetails
+              student={selectedStudent}
+              enrollments={enrollments}
+              onClose={() => setSelectedStudent(null)}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function UsersView() {
+// ==================== STUDENT DETAILS ====================
+function StudentDetails({ student, enrollments, onClose }) {
   return (
-    <div className="view-placeholder">
-      <h2>👥 Parent Accounts</h2>
-      <p>User management coming soon...</p>
+    <div className="details-panel">
+      <div className="details-header">
+        <h3>{student.studentname}</h3>
+        <button onClick={onClose} className="btn-close">✕</button>
+      </div>
+
+      <div className="details-section">
+        <h4>Student Information</h4>
+        <div className="info-grid">
+          <div className="info-item">
+            <label>Name:</label>
+            <span>{student.studentname}</span>
+          </div>
+          {student.studentnationalid && (
+            <div className="info-item">
+              <label>National ID:</label>
+              <span>{student.studentnationalid}</span>
+            </div>
+          )}
+          {student.studentbirthdate && (
+            <div className="info-item">
+              <label>Birth Date:</label>
+              <span>{new Date(student.studentbirthdate).toLocaleDateString()}</span>
+            </div>
+          )}
+          {student.studentgrade && (
+            <div className="info-item">
+              <label>Grade:</label>
+              <span>{student.studentgrade}</span>
+            </div>
+          )}
+          {student.studentschool && (
+            <div className="info-item">
+              <label>School:</label>
+              <span>{student.studentschool}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="details-section">
+        <h4>Parent Information</h4>
+        <div className="info-grid">
+          <div className="info-item">
+            <label>Parent Name:</label>
+            <span>{student.parent_name || 'N/A'}</span>
+          </div>
+          <div className="info-item">
+            <label>Parent Phone:</label>
+            <span>{student.parent_phone || 'N/A'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="details-section">
+        <h4>Enrollments ({enrollments.length})</h4>
+        {enrollments.length === 0 ? (
+          <p className="empty-message">No enrollments yet</p>
+        ) : (
+          <div className="enrollments-list">
+            {enrollments.map(enrollment => (
+              <div key={enrollment.enrollmentid} className="enrollment-item">
+                <div className="enrollment-header">
+                  <h5>{enrollment.coursename}</h5>
+                  <span className={`status-badge ${enrollment.enrollmentstatus}`}>
+                    {enrollment.enrollmentstatus}
+                  </span>
+                </div>
+                <p className="enrollment-session">{enrollment.sessionname}</p>
+                <div className="enrollment-details">
+                  <span>Teacher: {enrollment.teachername}</span>
+                  <span>Day: {enrollment.sessiondayofweek}</span>
+                  <span>Time: {enrollment.sessionstarttime} - {enrollment.sessionendtime}</span>
+                </div>
+                {enrollment.sessionstartdate && (
+                  <p className="enrollment-date">
+                    Starts: {new Date(enrollment.sessionstartdate).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function EnrollmentsView() {
+
+function UsersView({ setMessage }) {
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userDetails, setUserDetails] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await adminApi.getAllUsers();
+      setUsers(response.data.data);
+    } catch (error) {
+      setMessage('Error fetching users: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserDetails = async (userId) => {
+    try {
+      const response = await adminApi.getUserById(userId);
+      setUserDetails(response.data.data);
+    } catch (error) {
+      setMessage('Error fetching user details: ' + error.message);
+    }
+  };
+
+  const handleSelectUser = (user) => {
+    setSelectedUser(user);
+    fetchUserDetails(user.userid);
+  };
+
+  const filteredUsers = users.filter(user =>
+    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.userphone.includes(searchTerm)
+  );
+
+  if (loading) return <div className="loading">Loading parent accounts...</div>;
+
   return (
-    <div className="view-placeholder">
-      <h2>📋 Enrollment Management</h2>
-      <p>Enrollment management coming soon...</p>
+    <div className="users-management">
+      <div className="management-header">
+        <h2>Parent Accounts</h2>
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="Search by name or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="users-layout">
+        <div className="users-list-panel">
+          <h3>All Parents ({filteredUsers.length})</h3>
+          <div className="users-list">
+            {filteredUsers.map(user => (
+              <div
+                key={user.userid}
+                className={`user-item ${selectedUser?.userid === user.userid ? 'selected' : ''}`}
+                onClick={() => handleSelectUser(user)}
+              >
+                <div className="user-item-header">
+                  <h4>{user.username}</h4>
+                  <span className="student-count-badge">
+                    {user.student_count} {user.student_count === 1 ? 'child' : 'children'}
+                  </span>
+                </div>
+                <div className="user-item-details">
+                  <p>Phone: {user.userphone}</p>
+                  {user.userwechat && <p>WeChat: {user.userwechat}</p>}
+                  <p className="join-date">
+                    Joined: {new Date(user.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {selectedUser && userDetails && (
+          <div className="user-details-panel">
+            <UserDetails
+              user={userDetails.user}
+              students={userDetails.students}
+              onClose={() => {
+                setSelectedUser(null);
+                setUserDetails(null);
+              }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-// Add this component to your admin App.js
-// Replace the placeholder TeachersView or add this to your file
+
+// ==================== USER DETAILS ====================
+function UserDetails({ user, students, onClose }) {
+  return (
+    <div className="details-panel">
+      <div className="details-header">
+        <h3>{user.username}</h3>
+        <button onClick={onClose} className="btn-close">✕</button>
+      </div>
+
+      <div className="details-section">
+        <h4>Contact Information</h4>
+        <div className="info-grid">
+          <div className="info-item">
+            <label>Name:</label>
+            <span>{user.username}</span>
+          </div>
+          <div className="info-item">
+            <label>Phone:</label>
+            <span>{user.userphone}</span>
+          </div>
+          {user.userwechat && (
+            <div className="info-item">
+              <label>WeChat:</label>
+              <span>{user.userwechat}</span>
+            </div>
+          )}
+          {user.useraddress && (
+            <div className="info-item full-width">
+              <label>Address:</label>
+              <span>{user.useraddress}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="details-section">
+        <h4>Account Information</h4>
+        <div className="info-grid">
+          <div className="info-item">
+            <label>Account Created:</label>
+            <span>{new Date(user.created_at).toLocaleString()}</span>
+          </div>
+          <div className="info-item">
+            <label>Last Login:</label>
+            <span>
+              {user.last_login
+                ? new Date(user.last_login).toLocaleString()
+                : 'Never'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="details-section">
+        <h4>Children ({students.length})</h4>
+        {students.length === 0 ? (
+          <p className="empty-message">No children added yet</p>
+        ) : (
+          <div className="children-list">
+            {students.map(student => (
+              <div key={student.studentid} className="child-card">
+                <div className="child-header">
+                  <h5>{student.studentname}</h5>
+                  <span className="enrollment-badge">
+                    {student.enrollment_count} active enrollments
+                  </span>
+                </div>
+                <div className="child-info">
+                  {student.studentgrade && <p>Grade: {student.studentgrade}</p>}
+                  {student.studentschool && <p>School: {student.studentschool}</p>}
+                  {student.studentbirthdate && (
+                    <p>Birth Date: {new Date(student.studentbirthdate).toLocaleDateString()}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EnrollmentsView({ setMessage }) {
+  const [enrollments, setEnrollments] = useState([]);
+  const [filteredEnrollments, setFilteredEnrollments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    waitlisted: 0,
+    withdrawn: 0
+  });
+
+  useEffect(() => {
+    fetchEnrollments();
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [enrollments, statusFilter, searchTerm]);
+
+  const fetchEnrollments = async () => {
+    setLoading(true);
+    try {
+      const response = await adminApi.getAllEnrollmentsAdmin();
+      const data = response.data.data;
+      setEnrollments(data);
+
+      // Calculate stats
+      setStats({
+        total: data.length,
+        active: data.filter(e => e.enrollmentstatus === 'active').length,
+        waitlisted: data.filter(e => e.enrollmentstatus === 'waitlisted').length,
+        withdrawn: data.filter(e => e.enrollmentstatus === 'withdrawn').length
+      });
+    } catch (error) {
+      setMessage('Error fetching enrollments: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = enrollments;
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(e => e.enrollmentstatus === statusFilter);
+    }
+
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(e =>
+        e.studentname.toLowerCase().includes(term) ||
+        e.coursename.toLowerCase().includes(term) ||
+        e.parentname.toLowerCase().includes(term)
+      );
+    }
+
+    setFilteredEnrollments(filtered);
+  };
+
+  const handleStatusChange = async (enrollmentId, newStatus) => {
+    try {
+      await adminApi.updateEnrollmentStatus(enrollmentId, newStatus);
+      setMessage('Enrollment status updated successfully');
+      fetchEnrollments();
+    } catch (error) {
+      setMessage('Error: ' + (error.response?.data?.error || error.message));
+    }
+  };
+
+  if (loading) return <div className="loading">Loading enrollments...</div>;
+
+  return (
+    <div className="enrollments-management">
+      <div className="management-header">
+        <h2>Enrollment Management</h2>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="enrollment-stats">
+        <div className="stat-card-small">
+          <h4>Total</h4>
+          <p className="stat-number">{stats.total}</p>
+        </div>
+        <div className="stat-card-small active">
+          <h4>Active</h4>
+          <p className="stat-number">{stats.active}</p>
+        </div>
+        <div className="stat-card-small waitlisted">
+          <h4>Waitlisted</h4>
+          <p className="stat-number">{stats.waitlisted}</p>
+        </div>
+        <div className="stat-card-small withdrawn">
+          <h4>Withdrawn</h4>
+          <p className="stat-number">{stats.withdrawn}</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="enrollment-filters">
+        <div className="filter-group">
+          <label>Status:</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="waitlisted">Waitlisted</option>
+            <option value="withdrawn">Withdrawn</option>
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <input
+            type="text"
+            placeholder="Search by student, course, or parent..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <div className="filter-info">
+          Showing {filteredEnrollments.length} of {enrollments.length} enrollments
+        </div>
+      </div>
+
+      {/* Enrollments Table */}
+      <div className="enrollments-table-container">
+        <table className="enrollments-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Parent</th>
+              <th>Course</th>
+              <th>Session</th>
+              <th>Schedule</th>
+              <th>Enrolled Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredEnrollments.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="empty-row">
+                  No enrollments found
+                </td>
+              </tr>
+            ) : (
+              filteredEnrollments.map(enrollment => (
+                <tr key={enrollment.enrollmentid}>
+                  <td>
+                    <strong>{enrollment.studentname}</strong>
+                  </td>
+                  <td>
+                    <div>{enrollment.parentname}</div>
+                    <div className="sub-info">{enrollment.parentphone}</div>
+                  </td>
+                  <td>{enrollment.coursename}</td>
+                  <td>
+                    <div>{enrollment.sessionname}</div>
+                    <div className="sub-info">Teacher: {enrollment.teachername}</div>
+                  </td>
+                  <td>
+                    <div>{enrollment.sessiondayofweek}</div>
+                    <div className="sub-info">
+                      {enrollment.sessionstarttime} - {enrollment.sessionendtime}
+                    </div>
+                  </td>
+                  <td>
+                    {new Date(enrollment.enrollmentdate).toLocaleDateString()}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${enrollment.enrollmentstatus}`}>
+                      {enrollment.enrollmentstatus}
+                    </span>
+                  </td>
+                  <td>
+                    <select
+                      value={enrollment.enrollmentstatus}
+                      onChange={(e) => handleStatusChange(enrollment.enrollmentid, e.target.value)}
+                      className="status-select"
+                    >
+                      <option value="active">Active</option>
+                      <option value="waitlisted">Waitlisted</option>
+                      <option value="withdrawn">Withdrawn</option>
+                    </select>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 function TeachersView({ setMessage }) {
   const [teachers, setTeachers] = useState([]);

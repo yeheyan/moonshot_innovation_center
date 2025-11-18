@@ -27,6 +27,7 @@ const studentRoutes = require('./routes/students');
 const adminAuthRoutes = require('./routes/adminAuth');
 const courseRoutes = require('./routes/courses');
 const teacherRoutes = require('./routes/teachers');
+const adminStudentRoutes = require('./routes/adminStudents');
 
 // Mount routes
 app.use('/api/auth', authRoutes);           // /api/auth/login, /api/auth/register, etc.
@@ -36,6 +37,7 @@ app.use('/api/students', studentRoutes);     // /api/students/parent/:userId, et
 app.use('/api/admin', adminAuthRoutes);    // /api/admin/login, etc.
 app.use('/api/courses', courseRoutes);
 app.use('/api/teachers', teacherRoutes);
+app.use('/api/admin', adminStudentRoutes);
 // ============================================
 // HEALTH CHECK - test if server is running
 // ============================================
