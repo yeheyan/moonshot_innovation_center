@@ -24,13 +24,18 @@ const authRoutes = require('./routes/auth');
 const sessionRoutes = require('./routes/sessions');
 const enrollmentRoutes = require('./routes/enrollments');
 const studentRoutes = require('./routes/students');
+const adminAuthRoutes = require('./routes/adminAuth');
+const courseRoutes = require('./routes/courses');
+const teacherRoutes = require('./routes/teachers');
 
 // Mount routes
 app.use('/api/auth', authRoutes);           // /api/auth/login, /api/auth/register, etc.
 app.use('/api/sessions', sessionRoutes);     // /api/sessions, /api/sessions/:id
 app.use('/api/enrollments', enrollmentRoutes); // /api/enrollments, etc.
 app.use('/api/students', studentRoutes);     // /api/students/parent/:userId, etc.
-
+app.use('/api/admin', adminAuthRoutes);    // /api/admin/login, etc.
+app.use('/api/courses', courseRoutes);
+app.use('/api/teachers', teacherRoutes);
 // ============================================
 // HEALTH CHECK - test if server is running
 // ============================================

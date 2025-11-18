@@ -1,7 +1,7 @@
 const db = require('../db/connection');
 
 // Get available sessions
-const getAvailableSessions = async (req, res) => {
+exports.getAvailableSessions = async (req, res) => {
     try {
         const { studentId, courseId, dayOfWeek } = req.query;
 
@@ -31,7 +31,6 @@ const getAvailableSessions = async (req, res) => {
         const params = [];
         let paramIndex = 1;
 
-        // If studentId provided, exclude already enrolled sessions
         if (studentId) {
             query += `
         AND s.SessionID NOT IN (
@@ -43,14 +42,12 @@ const getAvailableSessions = async (req, res) => {
             paramIndex++;
         }
 
-        // Filter by course
         if (courseId) {
             query += ` AND c.CourseID = $${paramIndex}`;
             params.push(courseId);
             paramIndex++;
         }
 
-        // Filter by day of week
         if (dayOfWeek) {
             query += ` AND s.SessionDayOfWeek = $${paramIndex}`;
             params.push(dayOfWeek);
@@ -76,7 +73,7 @@ const getAvailableSessions = async (req, res) => {
 };
 
 // Get session details
-const getSessionById = async (req, res) => {
+exports.getSessionById = async (req, res) => {
     try {
         const { sessionId } = req.params;
 
@@ -103,7 +100,6 @@ const getSessionById = async (req, res) => {
             });
         }
 
-        // Get enrolled students
         const enrolledResult = await db.query(
             `SELECT
         st.StudentName,
@@ -133,7 +129,124 @@ const getSessionById = async (req, res) => {
     }
 };
 
-module.exports = {
-    getAvailableSessions,
-    getSessionById
+exports.createSession = async (req, res) => {
+    try {
+        const {
+            courseId,
+            teacherId,
+            sessionName,
+            sessionDayOfWeek,
+            sessionStartTime,
+            sessionEndTime,
+            sessionStartDate
+        } = req.body;
+
+        if (!courseId || !teacherId || !sessionName || !sessionDayOfWeek || !sessionStartTime || !sessionEndTime || !sessionStartDate) {
+            return res.status(400).json({
+                success: false,
+                error: 'All fields are required'
+            });
+        }
+
+        const result = await db.query(
+            `INSERT INTO Session (
+        CourseID, TeacherID, SessionName, SessionDayOfWeek,
+        SessionStartTime, SessionEndTime, SessionStartDate, EnrolledCount
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
+      RETURNING *`,
+            [courseId, teacherId, sessionName, sessionDayOfWeek, sessionStartTime, sessionEndTime, sessionStartDate]
+        );
+
+        res.status(201).json({
+            success: true,
+            message: 'Session created successfully',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error creating session:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+exports.updateSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { sessionName, sessionDayOfWeek, sessionStartTime, sessionEndTime, sessionStartDate, teacherId } = req.body;
+
+        const result = await db.query(
+            `UPDATE Session SET
+        SessionName = COALESCE($1, SessionName),
+        SessionDayOfWeek = COALESCE($2, SessionDayOfWeek),
+        SessionStartTime = COALESCE($3, SessionStartTime),
+        SessionEndTime = COALESCE($4, SessionEndTime),
+        SessionStartDate = COALESCE($5, SessionStartDate),
+        TeacherID = COALESCE($6, TeacherID)
+      WHERE SessionID = $7
+      RETURNING *`,
+            [sessionName, sessionDayOfWeek, sessionStartTime, sessionEndTime, sessionStartDate, teacherId, sessionId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Session not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Session updated successfully',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating session:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+exports.deleteSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+
+        const enrollmentCheck = await db.query(
+            'SELECT COUNT(*) FROM SessionEnrollment WHERE SessionID = $1 AND EnrollmentStatus = \'active\'',
+            [sessionId]
+        );
+
+        if (parseInt(enrollmentCheck.rows[0].count) > 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cannot delete session with active enrollments'
+            });
+        }
+
+        const result = await db.query(
+            'DELETE FROM Session WHERE SessionID = $1 RETURNING *',
+            [sessionId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Session not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Session deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 };
