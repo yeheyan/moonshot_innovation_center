@@ -805,3 +805,261 @@ body {
     width: 100%;
   }
 }
+
+/* ==================== PAYMENT MODAL ==================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.payment-modal {
+  max-width: 500px;
+  width: 90%;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2d3748;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #718096;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.close-btn:hover {
+  background: #e2e8f0;
+  color: #2d3748;
+}
+
+.payment-summary {
+  background: #f7fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.payment-summary h4 {
+  margin: 0 0 1rem 0;
+  color: #2d3748;
+}
+
+.price-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-label {
+  color: #718096;
+  font-weight: 600;
+}
+
+.price-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.payment-methods h4 {
+  margin-bottom: 1rem;
+  color: #2d3748;
+}
+
+.payment-option {
+  width: 100%;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+}
+
+.payment-option:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.payment-option.selected {
+  border-color: #667eea;
+  background: #edf2f7;
+}
+
+.payment-icon {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7fafc;
+  border-radius: 50%;
+}
+
+.payment-option strong {
+  display: block;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+}
+
+.payment-option p {
+  margin: 0;
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.offline-payment-info {
+  background: #fef5e7;
+  border: 1px solid #f6ad55;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.offline-payment-info p {
+  margin: 0 0 1rem 0;
+  color: #744210;
+}
+
+.confirm-btn {
+  width: 100%;
+  background: #48bb78;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background: #38a169;
+}
+
+.confirm-btn:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+}
+
+/* ==================== QR CODE DISPLAY ==================== */
+.qr-code-display {
+  text-align: center;
+  padding: 1rem;
+}
+
+.qr-code-display h4 {
+  margin-bottom: 1.5rem;
+  color: #2d3748;
+}
+
+.mock-qr-code {
+  display: inline-block;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.qr-placeholder {
+  width: 200px;
+  height: 200px;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  width: 180px;
+  height: 180px;
+}
+
+.qr-cell {
+  background: white;
+  border-radius: 1px;
+}
+
+.qr-cell.filled {
+  background: #2d3748;
+}
+
+.qr-label {
+  margin: 0;
+  color: #718096;
+  font-weight: 600;
+}
+
+.processing-indicator {
+  margin-top: 1.5rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.processing-indicator p {
+  margin: 0.5rem 0;
+  color: #4a5568;
+}
+
+.mock-note {
+  font-size: 0.85rem;
+  color: #a0aec0;
+  font-style: italic;
+}
