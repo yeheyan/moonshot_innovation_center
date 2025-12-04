@@ -101,10 +101,24 @@ function App() {
     }
   };
 
-  const enrollStudent = async (studentId, sessionId) => {
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+
+  const initiateEnrollment = (studentId, sessionId, sessionPrice, sessionName) => {
+    setSelectedEnrollment({ studentId, sessionId, sessionPrice, sessionName });
+    setShowPaymentModal(true);
+  };
+
+  const completeEnrollment = async (paymentMethod) => {
     try {
-      await api.createEnrollment({ studentId, sessionId });
-      setMessage('Enrolled successfully!');
+      await api.createEnrollment({
+        studentId: selectedEnrollment.studentId,
+        sessionId: selectedEnrollment.sessionId,
+        paymentMethod
+      });
+      setMessage('Enrolled and payment recorded successfully!');
+      setShowPaymentModal(false);
+      setSelectedEnrollment(null);
       fetchStudents();
       fetchSessions();
       return true;
@@ -161,19 +175,19 @@ function App() {
           className={activeTab === 'students' ? 'active' : ''}
           onClick={() => setActiveTab('students')}
         >
-          My Learners
+          👦 My Children
         </button>
         <button
           className={activeTab === 'sessions' ? 'active' : ''}
           onClick={() => setActiveTab('sessions')}
         >
-          Available Sessions
+          📚 Available Courses
         </button>
         <button
           className={activeTab === 'enrollments' ? 'active' : ''}
           onClick={() => setActiveTab('enrollments')}
         >
-          My Enrollments
+          📋 My Enrollments
         </button>
       </div>
 
@@ -193,7 +207,18 @@ function App() {
           <SessionsTab
             sessions={sessions}
             students={students}
-            onEnroll={enrollStudent}
+            onEnroll={initiateEnrollment}
+          />
+        )}
+
+        {showPaymentModal && selectedEnrollment && (
+          <PaymentModal
+            enrollment={selectedEnrollment}
+            onConfirm={completeEnrollment}
+            onCancel={() => {
+              setShowPaymentModal(false);
+              setSelectedEnrollment(null);
+            }}
           />
         )}
 
@@ -269,7 +294,7 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
   return (
     <div className="students-tab">
       <div className="tab-header">
-        <h2>My Learners</h2>
+        <h2>My Children</h2>
         {!showForm && (
           <button onClick={() => setShowForm(true)}>+ Add Child</button>
         )}
@@ -277,10 +302,10 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
 
       {showForm && (
         <form onSubmit={handleSubmit} className="student-form">
-          <h3>{editingStudent ? 'Edit Learner' : 'Add Learner'}</h3>
+          <h3>{editingStudent ? 'Edit Child' : 'Add Child'}</h3>
           <input
             type="text"
-            placeholder="Learner's Name *"
+            placeholder="Child's Name *"
             value={formData.studentName}
             onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
             required
@@ -324,21 +349,21 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
             <div key={student.studentid} className="student-card">
               <div className="student-info">
                 <h3>{student.studentname}</h3>
-                {student.studentgrade && <p> Grade: {student.studentgrade}</p>}
-                {student.studentschool && <p> School: {student.studentschool}</p>}
+                {student.studentgrade && <p>📚 Grade: {student.studentgrade}</p>}
+                {student.studentschool && <p>🏫 {student.studentschool}</p>}
                 {student.studentbirthdate && (
-                  <p> Birth Date: {new Date(student.studentbirthdate).toLocaleDateString()}</p>
+                  <p>🎂 {new Date(student.studentbirthdate).toLocaleDateString()}</p>
                 )}
               </div>
               <div className="student-actions">
                 <button onClick={() => handleEdit(student)} className="edit-btn">
-                  Edit
+                  ✏️ Edit
                 </button>
                 <button
                   onClick={() => onDeleteStudent(student.studentid, student.studentname)}
                   className="delete-btn"
                 >
-                  Delete
+                  🗑️ Delete
                 </button>
               </div>
             </div>
@@ -349,7 +374,7 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
   );
 }
 
-// ==================== SESSIONS TAB ====================
+// ==================== SESSIONS TAB (GROUPED BY COURSE) ====================
 function SessionsTab({ sessions, students, onEnroll }) {
   const [selectedStudent, setSelectedStudent] = useState('');
   const [enrolling, setEnrolling] = useState(null);
@@ -379,13 +404,13 @@ function SessionsTab({ sessions, students, onEnroll }) {
     }));
   };
 
-  const handleEnroll = async (sessionId) => {
+  const handleEnroll = async (sessionId, sessionPrice, sessionName) => {
     if (!selectedStudent) {
       alert('Please select a student first');
       return;
     }
     setEnrolling(sessionId);
-    await onEnroll(selectedStudent, sessionId);
+    await onEnroll(selectedStudent, sessionId, sessionPrice, sessionName);
     setEnrolling(null);
   };
 
@@ -423,7 +448,7 @@ function SessionsTab({ sessions, students, onEnroll }) {
                 <div className="course-info">
                   <h3>{data.courseInfo.name}</h3>
                   <p className="course-description">{data.courseInfo.description}</p>
-                  <span className="course-price"> ¥{data.courseInfo.price}</span>
+                  <span className="course-price">💰 ¥{data.courseInfo.price}</span>
                   <span className="session-count">
                     {data.sessions.length} session{data.sessions.length > 1 ? 's' : ''} available
                   </span>
@@ -440,9 +465,9 @@ function SessionsTab({ sessions, students, onEnroll }) {
                       <div className="session-details-compact">
                         <h4>{session.session_name}</h4>
                         <div className="session-info-row">
-                          <span> teacher: {session.teacher_name}</span>
-                          <span> day of week: {session.day_of_week}</span>
-                          <span> start time: {session.start_time} - {session.end_time}</span>
+                          <span>👨‍🏫 {session.teacher_name}</span>
+                          <span>📅 {session.day_of_week}</span>
+                          <span>🕐 {session.start_time} - {session.end_time}</span>
                         </div>
                         <span className={`availability ${session.status === 'available' ? 'available' : 'full'}`}>
                           {session.available_spots > 0
@@ -451,7 +476,7 @@ function SessionsTab({ sessions, students, onEnroll }) {
                         </span>
                       </div>
                       <button
-                        onClick={() => handleEnroll(session.session_id)}
+                        onClick={() => handleEnroll(session.session_id, session.price, session.session_name)}
                         disabled={!selectedStudent || enrolling === session.session_id}
                         className="enroll-btn-compact"
                       >
@@ -540,11 +565,11 @@ function EnrollmentsTab({ students, onWithdraw }) {
                         <span className={`status ${e.enrollmentstatus}`}>
                           {e.enrollmentstatus}
                         </span>
-                        <p> Day: {e.sessiondayofweek} Time: {e.sessionstarttime} - {e.sessionendtime}</p>
-                        <p> Start Date: {new Date(e.sessionstartdate).toLocaleDateString()}</p>
-                        <p> Teacher: {e.teachername}</p>
+                        <p>📅 {e.sessiondayofweek} {e.sessionstarttime} - {e.sessionendtime}</p>
+                        <p>🗓️ Starts: {new Date(e.sessionstartdate).toLocaleDateString()}</p>
+                        <p>👨‍🏫 {e.teachername}</p>
                         {daysUntil > 0 && (
-                          <p className="days-until"> {daysUntil} days until session</p>
+                          <p className="days-until">⏰ {daysUntil} days until session</p>
                         )}
                       </div>
                       {e.enrollmentstatus === 'active' && (
@@ -673,6 +698,137 @@ function LoginPage({ onLoginSuccess }) {
             {isLogin ? 'Register' : 'Login'}
           </button>
         </p>
+      </div>
+    </div>
+  );
+}
+
+// ==================== PAYMENT MODAL ====================
+function PaymentModal({ enrollment, onConfirm, onCancel }) {
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [showQR, setShowQR] = useState(false);
+  const [processing, setProcessing] = useState(false);
+
+  const handlePaymentSelect = (method) => {
+    setPaymentMethod(method);
+
+    // For online payments, show QR code
+    if (method === 'wechat' || method === 'alipay') {
+      setShowQR(true);
+
+      // Auto-confirm after 3 seconds (mock)
+      setTimeout(() => {
+        handleConfirm(method);
+      }, 3000);
+    }
+  };
+
+  const handleConfirm = async (method) => {
+    setProcessing(true);
+    const success = await onConfirm(method || paymentMethod);
+    if (!success) {
+      setProcessing(false);
+      setShowQR(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content payment-modal">
+        <div className="modal-header">
+          <h3>Complete Payment</h3>
+          <button onClick={onCancel} className="close-btn">✕</button>
+        </div>
+
+        <div className="payment-summary">
+          <h4>{enrollment.sessionName}</h4>
+          <div className="price-display">
+            <span className="price-label">Total Amount:</span>
+            <span className="price-amount">¥{enrollment.sessionPrice || 0}</span>
+          </div>
+        </div>
+
+        {!showQR ? (
+          <div className="payment-methods">
+            <h4>Select Payment Method</h4>
+
+            <button
+              className={`payment-option ${paymentMethod === 'wechat' ? 'selected' : ''}`}
+              onClick={() => handlePaymentSelect('wechat')}
+            >
+              <span className="payment-icon">💚</span>
+              <div>
+                <strong>WeChat Pay</strong>
+                <p>Instant confirmation</p>
+              </div>
+            </button>
+
+            <button
+              className={`payment-option ${paymentMethod === 'alipay' ? 'selected' : ''}`}
+              onClick={() => handlePaymentSelect('alipay')}
+            >
+              <span className="payment-icon">💙</span>
+              <div>
+                <strong>Alipay</strong>
+                <p>Instant confirmation</p>
+              </div>
+            </button>
+
+            <button
+              className={`payment-option ${paymentMethod === 'bank' ? 'selected' : ''}`}
+              onClick={() => setPaymentMethod('bank')}
+            >
+              <span className="payment-icon">🏦</span>
+              <div>
+                <strong>Bank Transfer</strong>
+                <p>Pending confirmation</p>
+              </div>
+            </button>
+
+            <button
+              className={`payment-option ${paymentMethod === 'cash' ? 'selected' : ''}`}
+              onClick={() => setPaymentMethod('cash')}
+            >
+              <span className="payment-icon">💵</span>
+              <div>
+                <strong>Cash</strong>
+                <p>Pay at center</p>
+              </div>
+            </button>
+
+            {paymentMethod && !['wechat', 'alipay'].includes(paymentMethod) && (
+              <div className="offline-payment-info">
+                <p>Your enrollment will be marked as pending until payment is confirmed.</p>
+                <button
+                  onClick={() => handleConfirm(paymentMethod)}
+                  disabled={processing}
+                  className="confirm-btn"
+                >
+                  {processing ? 'Processing...' : 'Confirm Enrollment'}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="qr-code-display">
+            <h4>Scan to Pay ¥{enrollment.sessionPrice}</h4>
+            <div className="mock-qr-code">
+              <div className="qr-placeholder">
+                <div className="qr-grid">
+                  {[...Array(64)].map((_, i) => (
+                    <div key={i} className={`qr-cell ${Math.random() > 0.5 ? 'filled' : ''}`}></div>
+                  ))}
+                </div>
+              </div>
+              <p className="qr-label">{paymentMethod === 'wechat' ? 'WeChat Pay' : 'Alipay'}</p>
+            </div>
+            <div className="processing-indicator">
+              <div className="spinner"></div>
+              <p>Processing payment...</p>
+              <p className="mock-note">(Mock payment will auto-complete in 3 seconds)</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

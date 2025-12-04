@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict EkaQk5uEH1ksOd0pF9BzBpOXsziMw3T98jnAIiupahp8bOd1u7a9Uz19IX73Ork
+\restrict GsREdDPkDocgrQNdujZzJagODMNLNh0AjU11kCG31H6kyUafHTiriqVafoLPadC
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -1081,7 +1081,7 @@ ALTER TABLE ONLY public.user_account ALTER COLUMN userid SET DEFAULT nextval('pu
 --
 
 COPY public.admin (adminid, adminname, adminemail, password_hash, adminrole, created_at, last_login) FROM stdin;
-1	Admin	admin@moonshot.com	$2b$10$l5Xt7JV.dlVe8fdg.khA4.NkAGofBhSgONZ1Dtr5h/WQgXNS4Eefq	admin	2025-11-18 13:52:48.774495	2025-11-18 14:12:44.18884
+1	Admin	admin@moonshot.com	$2b$10$l5Xt7JV.dlVe8fdg.khA4.NkAGofBhSgONZ1Dtr5h/WQgXNS4Eefq	admin	2025-11-18 13:52:48.774495	2025-12-03 23:32:39.563598
 \.
 
 
@@ -1090,11 +1090,11 @@ COPY public.admin (adminid, adminname, adminemail, password_hash, adminrole, cre
 --
 
 COPY public.course (courseid, coursename, coursedescription, courseprice, coursemaxenroll, coursestatus, created_at) FROM stdin;
-2	少儿编程Python	零基础学习Python编程	3500.00	15	active	2025-11-14 15:07:10.746799
-3	创意美术	激发艺术创造力	2200.00	12	active	2025-11-14 15:07:10.746799
-4	物理实验课	动手做实验，理解物理原理	3000.00	10	active	2025-11-14 15:07:10.746799
-5	英语口语	外教小班口语训练	4000.00	8	active	2025-11-14 15:07:10.746799
-1	趣味数学	培养数学思维，适合小学3-6年级	2800.00	1	active	2025-11-14 15:07:10.746799
+2	Python 101	Learn Python from scratch.	3500.00	15	active	2025-11-14 15:07:10.746799
+3	3D Printer	Design and create your first 3D print toys	2200.00	12	active	2025-11-14 15:07:10.746799
+4	AI for Kids	Teach basic flow of AI. Build your own AI modal 	3000.00	10	active	2025-11-14 15:07:10.746799
+5	Drone Design	Design and build your own drone.	4000.00	8	active	2025-11-14 15:07:10.746799
+1	Robotic Arm Design	Design and build your first robotic arm that can pick things up.	4000.00	5	active	2025-11-14 15:07:10.746799
 \.
 
 
@@ -1113,6 +1113,14 @@ COPY public.enrollmentaudit (auditid, enrollmentid, studentid, sessionid, oldsta
 12	18	8	6	\N	active	postgres	2025-11-18 11:18:50.861269	INSERT
 13	18	8	6	active	withdrawn	postgres	2025-11-18 11:42:14.557481	UPDATE
 14	18	8	6	withdrawn	\N	postgres	2025-11-18 11:46:11.934889	DELETE
+15	19	9	6	\N	active	postgres	2025-11-18 17:25:44.74968	INSERT
+16	19	9	6	active	withdrawn	postgres	2025-11-18 17:25:51.314738	UPDATE
+17	20	10	6	\N	active	postgres	2025-12-02 13:56:24.856121	INSERT
+18	20	10	6	active	withdrawn	postgres	2025-12-02 13:56:32.672826	UPDATE
+25	27	10	6	\N	active	postgres	2025-12-02 14:30:43.901631	INSERT
+26	28	11	6	\N	active	postgres	2025-12-02 15:05:41.00689	INSERT
+27	29	13	6	\N	active	postgres	2025-12-03 23:41:45.547999	INSERT
+28	29	13	6	active	withdrawn	postgres	2025-12-03 23:42:31.868406	UPDATE
 \.
 
 
@@ -1123,6 +1131,9 @@ COPY public.enrollmentaudit (auditid, enrollmentid, studentid, sessionid, oldsta
 COPY public.order_transaction (orderid, userid, orderdate, discountamount, ordertotal, orderstatus, created_at) FROM stdin;
 8	2	2025-11-14 16:17:04.712737	0.00	2800.00	paid	2025-11-14 16:17:04.712737
 12	1	2025-11-16 16:55:26.044763	0.00	2800.00	paid	2025-11-16 16:55:26.044763
+19	7	2025-12-02 14:30:43.901631	0.00	2200.00	paid	2025-12-02 14:30:43.901631
+20	8	2025-12-02 15:05:41.00689	0.00	2200.00	paid	2025-12-02 15:05:41.00689
+21	7	2025-12-03 23:41:45.547999	0.00	2200.00	paid	2025-12-03 23:41:45.547999
 \.
 
 
@@ -1140,6 +1151,9 @@ COPY public.passwordresettokens (token_id, user_id, token, expires_at, used, cre
 
 COPY public.payment (paymentid, orderid, paymentamount, paymentdate, paymentmethod, paymentstatus) FROM stdin;
 3	12	2800.00	2025-11-16 16:55:26.044763	wechat	completed
+10	19	2200.00	2025-12-02 14:30:43.914	wechat	completed
+11	20	2200.00	2025-12-02 15:05:41.029	wechat	completed
+12	21	2200.00	2025-12-03 23:41:45.561	wechat	completed
 \.
 
 
@@ -1148,16 +1162,16 @@ COPY public.payment (paymentid, orderid, paymentamount, paymentdate, paymentmeth
 --
 
 COPY public.session (sessionid, courseid, teacherid, sessionname, sessiondayofweek, sessionstarttime, sessionendtime, enrolledcount, created_at, sessionstartdate) FROM stdin;
-3	1	1	趣味数学-周日上午班	Sunday	09:00:00	11:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
-4	2	2	少儿编程-周六上午班	Saturday	09:00:00	11:30:00	0	2025-11-14 15:07:10.75308	2025-12-18
-5	2	2	少儿编程-周日下午班	Sunday	14:00:00	16:30:00	0	2025-11-14 15:07:10.75308	2025-12-18
-7	3	5	创意美术-周日上午班	Sunday	09:00:00	11:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
-8	4	4	物理实验-周六上午班	Saturday	10:00:00	12:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
-9	5	3	英语口语-周六晚班	Saturday	18:00:00	20:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
-10	5	3	英语口语-周日下午班	Sunday	15:00:00	17:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
-1	1	1	趣味数学-周六上午班	Saturday	09:00:00	11:00:00	1	2025-11-14 15:07:10.75308	2025-12-18
-2	1	1	趣味数学-周六下午班	Saturday	14:00:00	16:00:00	1	2025-11-14 15:07:10.75308	2025-12-18
-6	3	5	创意美术-周六下午班	Saturday	14:00:00	16:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
+7	3	5	3D Printer-Sunday-Morning	Sunday	09:00:00	11:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
+9	5	3	Drone Design-Saturday-Evening	Saturday	18:00:00	20:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
+10	5	3	Drone Design-Sunday-Afternoon	Sunday	15:00:00	17:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
+6	3	5	3D Printer-Saturday-Afternoon	Saturday	14:00:00	16:00:00	4	2025-11-14 15:07:10.75308	2025-12-18
+3	1	1	Robotic Arm Design-Sunday-Moring	Sunday	09:00:00	11:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
+4	2	2	Python 101-Saturday-Morning	Saturday	09:00:00	11:30:00	0	2025-11-14 15:07:10.75308	2025-12-18
+5	2	2	Python 101-Sunday-Afternoon	Sunday	14:00:00	16:30:00	0	2025-11-14 15:07:10.75308	2025-12-18
+8	4	4	AI for Kids-Saturday-Morning	Saturday	10:00:00	12:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
+1	1	1	Robotic Arm Design-Saturday-Morning	Saturday	09:00:00	11:00:00	1	2025-11-14 15:07:10.75308	2025-12-18
+2	1	1	Robotic Arm Design-Saturday-Afternoon	Saturday	14:00:00	16:00:00	1	2025-11-14 15:07:10.75308	2025-12-18
 \.
 
 
@@ -1170,6 +1184,11 @@ COPY public.sessionenrollment (enrollmentid, studentid, sessionid, orderid, enro
 10	4	1	\N	active	2025-11-14 16:17:25.794563
 14	1	1	\N	withdrawn	2025-11-16 16:35:25.285511
 17	2	2	12	active	2025-11-16 16:55:26.044763
+19	9	6	\N	withdrawn	2025-11-18 17:25:44.74968
+20	10	6	\N	withdrawn	2025-12-02 13:56:24.856121
+27	10	6	19	active	2025-12-02 14:30:43.901631
+28	11	6	20	active	2025-12-02 15:05:41.00689
+29	13	6	21	withdrawn	2025-12-03 23:41:45.547999
 \.
 
 
@@ -1178,13 +1197,17 @@ COPY public.sessionenrollment (enrollmentid, studentid, sessionid, orderid, enro
 --
 
 COPY public.student (studentid, userid, studentname, studentnationalid, studentbirthdate, studentgrade, studentschool, medicalinfo, created_at) FROM stdin;
-1	1	张小明	\N	2013-05-15	小学四年级	中关村第一小学	\N	2025-11-14 15:07:10.749369
-2	1	张小红	\N	2015-08-20	小学二年级	中关村第一小学	\N	2025-11-14 15:07:10.749369
-3	2	李天天	\N	2012-03-10	小学五年级	望京实验学校	\N	2025-11-14 15:07:10.749369
-4	3	王一一	\N	2014-09-01	小学三年级	五道口小学	\N	2025-11-14 15:07:10.749369
-5	4	刘星	\N	2013-11-25	小学四年级	朝阳实验小学	\N	2025-11-14 15:07:10.749369
-6	4	刘月	\N	2016-02-14	小学一年级	朝阳实验小学	\N	2025-11-14 15:07:10.749369
-7	5	陈晨	\N	2012-07-08	小学五年级	知春里小学	\N	2025-11-14 15:07:10.749369
+11	8	Kim	\N	2021-09-09	\N	\N	\N	2025-12-02 15:04:39.647202
+9	6	Chelsea	\N	2020-07-08	\N	\N	\N	2025-11-18 17:24:49.383884
+10	7	Rahul	\N	2010-10-21	\N	\N	\N	2025-12-02 13:55:40.498824
+1	1	Jerry	\N	2013-05-15	Grade 3	Sunrise Elementary School	\N	2025-11-14 15:07:10.749369
+2	1	Mark 	\N	2015-08-20	Grade 1	Sunrise Elementary School	\N	2025-11-14 15:07:10.749369
+3	2	Lucy	\N	2012-03-10	Grade 4	Maple Elementary School	\N	2025-11-14 15:07:10.749369
+4	3	Sam	\N	2014-09-01	Grade 2	Cedar School	\N	2025-11-14 15:07:10.749369
+5	4	Xiaoming	\N	2013-11-25	Grade 2	Cedar School	\N	2025-11-14 15:07:10.749369
+6	4	Ali	\N	2016-02-14	Grade 3	Willow Park Elementary School	\N	2025-11-14 15:07:10.749369
+7	5	Zack	\N	2012-07-08	Grade 7	Maple Elementary School	\N	2025-11-14 15:07:10.749369
+13	7	Joe	\N	2001-10-01	\N	\N	\N	2025-12-03 23:41:36.676347
 \.
 
 
@@ -1193,11 +1216,11 @@ COPY public.student (studentid, userid, studentname, studentnationalid, studentb
 --
 
 COPY public.teacher (teacherid, teachername, teacherinfo, created_at) FROM stdin;
-1	王老师	10年数学教学经验，北京师范大学硕士	2025-11-14 15:07:10.745057
-2	李老师	专注少儿编程教育，清华大学计算机系	2025-11-14 15:07:10.745057
-3	张老师	英语八级，5年国际学校教学经验	2025-11-14 15:07:10.745057
-4	刘老师	中科院物理博士，善于启发式教学	2025-11-14 15:07:10.745057
-5	陈老师	美术学院毕业，专注创意美术教育	2025-11-14 15:07:10.745057
+1	Wong	Kids love him.	2025-11-14 15:07:10.745057
+2	Park	Worked in Google for 10 years.	2025-11-14 15:07:10.745057
+3	Jisoo	Computer Science PHD. 100 published articles 	2025-11-14 15:07:10.745057
+4	Jennie	UC mathematics master. 10 years in teaching.	2025-11-14 15:07:10.745057
+5	Lisa	MIT Engineer PHD. Program lead.	2025-11-14 15:07:10.745057
 \.
 
 
@@ -1206,12 +1229,15 @@ COPY public.teacher (teacherid, teachername, teacherinfo, created_at) FROM stdin
 --
 
 COPY public.user_account (userid, username, userphone, userwechat, useraddress, created_at, updated_at, password_hash, last_login) FROM stdin;
-1	张伟	13811112222	zhangwei_wx	海淀区中关村大街1号	2025-11-14 15:07:10.720962	2025-11-14 15:07:10.720962	\N	\N
-2	李娜	13922223333	lina_wx	朝阳区望京SOHO T1楼	2025-11-14 15:07:10.720962	2025-11-14 15:07:10.720962	\N	\N
-3	王强	13633334444	wangqiang_wx	海淀区五道口华清嘉园15号楼	2025-11-14 15:07:10.720962	2025-11-14 15:07:10.720962	\N	\N
-4	刘芳	13744445555	liufang_wx	朝阳区三里屯路19号	2025-11-14 15:07:10.720962	2025-11-14 15:07:10.720962	\N	\N
-5	陈明	13855556666	chenming_wx	海淀区知春路118号	2025-11-14 15:07:10.720962	2025-11-14 15:07:10.720962	\N	\N
-6	测试	13800138000	\N	\N	2025-11-17 16:53:47.793571	2025-11-18 13:10:20.155904	$2b$10$F9vGMGwx5dJIK5C0IjI0LunCXxeEuM.lrZmtiNXAXS.PxAlj0ENF2	2025-11-18 13:10:20.155904
+8	Changying	123456789	\N	\N	2025-12-02 15:03:57.324073	2025-12-02 15:03:57.324073	$2b$10$KZXDOzu2Oz2Jo3xHaNF/BOGUsMZ9N6pkg19kCK2pPUBdSaCgefduu	\N
+1	Bob	13811112222	zhangwei_wx	Chaoyao, Beijing	2025-11-14 15:07:10.720962	2025-12-03 23:12:42.955512	\N	\N
+2	Catherine	13922223333	lina_wx	Haidian, Beijing	2025-11-14 15:07:10.720962	2025-12-03 23:12:43.043054	\N	\N
+3	Violet	13633334444	wangqiang_wx	Chaoyao, Beijing	2025-11-14 15:07:10.720962	2025-12-03 23:12:43.044224	\N	\N
+4	Judy	13744445555	liufang_wx	Dongcheng, Beijing	2025-11-14 15:07:10.720962	2025-12-03 23:12:43.044989	\N	\N
+5	Nick	13855556666	chenming_wx	Dongcheg, Beijing	2025-11-14 15:07:10.720962	2025-12-03 23:12:43.04543	\N	\N
+6	Test	13800138000	\N	\N	2025-11-17 16:53:47.793571	2025-12-03 23:12:43.046139	$2b$10$F9vGMGwx5dJIK5C0IjI0LunCXxeEuM.lrZmtiNXAXS.PxAlj0ENF2	2025-11-18 17:24:23.201747
+7	Yehe	18600200483	\N	\N	2025-12-02 13:55:03.158144	2025-12-03 23:38:52.523988	$2b$10$UMmlgy6NPKH1cEXOb0Vp0u5dezA1zMUDWc2GilGPyBZehAxS7VMhq	2025-12-03 23:38:52.523988
+9	Joe doe	123456	\N	\N	2025-12-03 23:43:22.235344	2025-12-03 23:43:22.235344	$2b$10$D7.c9oqqjzcCnY.fZfaDweWKPODALMIqRjlCU0uT.9AHwuvhbuMZ2	\N
 \.
 
 
@@ -1226,21 +1252,21 @@ SELECT pg_catalog.setval('public.admin_adminid_seq', 1, true);
 -- Name: course_courseid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.course_courseid_seq', 5, true);
+SELECT pg_catalog.setval('public.course_courseid_seq', 7, true);
 
 
 --
 -- Name: enrollmentaudit_auditid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.enrollmentaudit_auditid_seq', 14, true);
+SELECT pg_catalog.setval('public.enrollmentaudit_auditid_seq', 28, true);
 
 
 --
 -- Name: order_transaction_orderid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.order_transaction_orderid_seq', 12, true);
+SELECT pg_catalog.setval('public.order_transaction_orderid_seq', 21, true);
 
 
 --
@@ -1254,42 +1280,42 @@ SELECT pg_catalog.setval('public.passwordresettokens_token_id_seq', 1, false);
 -- Name: payment_paymentid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.payment_paymentid_seq', 3, true);
+SELECT pg_catalog.setval('public.payment_paymentid_seq', 12, true);
 
 
 --
 -- Name: session_sessionid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.session_sessionid_seq', 10, true);
+SELECT pg_catalog.setval('public.session_sessionid_seq', 12, true);
 
 
 --
 -- Name: sessionenrollment_enrollmentid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sessionenrollment_enrollmentid_seq', 18, true);
+SELECT pg_catalog.setval('public.sessionenrollment_enrollmentid_seq', 29, true);
 
 
 --
 -- Name: student_studentid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.student_studentid_seq', 8, true);
+SELECT pg_catalog.setval('public.student_studentid_seq', 13, true);
 
 
 --
 -- Name: teacher_teacherid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.teacher_teacherid_seq', 5, true);
+SELECT pg_catalog.setval('public.teacher_teacherid_seq', 7, true);
 
 
 --
 -- Name: user_account_userid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.user_account_userid_seq', 6, true);
+SELECT pg_catalog.setval('public.user_account_userid_seq', 9, true);
 
 
 --
@@ -1601,5 +1627,5 @@ ALTER TABLE ONLY public.student
 -- PostgreSQL database dump complete
 --
 
-\unrestrict EkaQk5uEH1ksOd0pF9BzBpOXsziMw3T98jnAIiupahp8bOd1u7a9Uz19IX73Ork
+\unrestrict GsREdDPkDocgrQNdujZzJagODMNLNh0AjU11kCG31H6kyUafHTiriqVafoLPadC
 

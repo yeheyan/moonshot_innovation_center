@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 7Hr1r05Lv0Iogg5tyuAHnkEgYRucZwxDrU1NDbSEtetr6Otp2EdPqIbOBRMzkay
+\restrict I6CmkPF42WRrmSPtbQ4lWvaOqi2ItTIfFCMJO2BaTZXleVMzz9CWaLCQgz5Wykc
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -1385,5 +1385,5 @@ ALTER TABLE ONLY public.student
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 7Hr1r05Lv0Iogg5tyuAHnkEgYRucZwxDrU1NDbSEtetr6Otp2EdPqIbOBRMzkay
+\unrestrict I6CmkPF42WRrmSPtbQ4lWvaOqi2ItTIfFCMJO2BaTZXleVMzz9CWaLCQgz5Wykc
 

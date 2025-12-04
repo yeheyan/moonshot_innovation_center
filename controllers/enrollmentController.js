@@ -1,25 +1,36 @@
 const db = require('../db/connection');
 
+// Withdrawal deadline in days (configurable)
+const WITHDRAWAL_DEADLINE_DAYS = process.env.WITHDRAWAL_DEADLINE_DAYS || 7;
+
 // Create enrollment (enroll in a session)
 exports.createEnrollment = async (req, res) => {
     const client = await db.pool.connect();
 
     try {
-        const { sessionId, studentId } = req.body;
+        const { sessionId, studentId, paymentMethod } = req.body;
 
-        // Validate input
-        if (!sessionId || !studentId) {
-            return res.status(400).json({
+        // Get userId from student
+        const studentInfo = await client.query(
+            'SELECT UserID FROM Student WHERE StudentID = $1',
+            [studentId]
+        );
+
+        if (studentInfo.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
                 success: false,
-                error: 'Session ID and Student ID are required'
+                error: 'Student not found'
             });
         }
 
+        const userId = studentInfo.rows[0].userid;
+
         await client.query('BEGIN');
 
-        // Get session and course info
+        // Get course price
         const sessionInfo = await client.query(
-            `SELECT s.*, c.CourseMaxEnroll, s.EnrolledCount
+            `SELECT s.*, c.CourseMaxEnroll, c.CoursePrice, s.EnrolledCount
        FROM Session s
        JOIN Course c ON s.CourseID = c.CourseID
        WHERE s.SessionID = $1`,
@@ -34,9 +45,9 @@ exports.createEnrollment = async (req, res) => {
             });
         }
 
-        const { coursemaxenroll, enrolledcount } = sessionInfo.rows[0];
+        const { coursemaxenroll, courseprice, enrolledcount } = sessionInfo.rows[0];
 
-        // Check for duplicate enrollment
+        // Check duplicate
         const duplicate = await client.query(
             `SELECT * FROM SessionEnrollment
        WHERE StudentID = $1 AND SessionID = $2
@@ -52,15 +63,47 @@ exports.createEnrollment = async (req, res) => {
             });
         }
 
+        // Create order
+        const order = await client.query(
+            `INSERT INTO Order_Transaction (UserID, OrderTotal, DiscountAmount, OrderStatus, orderdate)
+ VALUES ($1, $2, 0, 'pending', NOW())
+ RETURNING *`,
+            [userId, courseprice]
+        );
+
+        const orderId = order.rows[0].orderid;
+
         // Determine enrollment status
         const enrollmentStatus = enrolledcount < coursemaxenroll ? 'active' : 'waitlisted';
 
-        // Create enrollment
+        // Create enrollment with OrderID
         const enrollment = await client.query(
-            `INSERT INTO SessionEnrollment (StudentID, SessionID, EnrollmentStatus, EnrollmentDate)
-       VALUES ($1, $2, $3, NOW())
+            `INSERT INTO SessionEnrollment (StudentID, SessionID, OrderID, EnrollmentStatus, EnrollmentDate)
+       VALUES ($1, $2, $3, $4, NOW())
        RETURNING *`,
-            [studentId, sessionId, enrollmentStatus]
+            [studentId, sessionId, orderId, enrollmentStatus]
+        );
+
+        // Generate mock transaction ID
+        const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+        // Payment status based on method
+        const paymentStatus = ['wechat', 'alipay'].includes(paymentMethod) ? 'completed' : 'pending';
+
+        // Create payment
+        const payment = await client.query(
+            `INSERT INTO Payment (OrderID, PaymentAmount, PaymentMethod, PaymentStatus, PaymentDate)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+            [orderId, courseprice, paymentMethod, paymentStatus, paymentStatus === 'completed' ? new Date() : null]
+        );
+
+        // Update order status
+        await client.query(
+            `UPDATE Order_Transaction
+       SET OrderStatus = $1
+       WHERE OrderID = $2`,
+            [paymentStatus === 'completed' ? 'paid' : 'pending', orderId]
         );
 
         // Update enrolled count if active
@@ -75,10 +118,15 @@ exports.createEnrollment = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            data: enrollment.rows[0],
+            data: {
+                enrollment: enrollment.rows[0],
+                order: order.rows[0],
+                payment: payment.rows[0],
+                transactionId: transactionId
+            },
             message: enrollmentStatus === 'active'
-                ? 'Successfully enrolled in session'
-                : 'Added to waitlist - session is full'
+                ? `Successfully enrolled! Payment ${paymentStatus}.`
+                : 'Added to waitlist'
         });
 
     } catch (error) {
@@ -93,7 +141,7 @@ exports.createEnrollment = async (req, res) => {
     }
 };
 
-// Withdraw from enrollment
+// Withdraw from enrollment (with deadline check)
 exports.withdrawEnrollment = async (req, res) => {
     const client = await db.pool.connect();
 
@@ -102,9 +150,12 @@ exports.withdrawEnrollment = async (req, res) => {
 
         await client.query('BEGIN');
 
-        // Get enrollment info
+        // Get enrollment info with session start date
         const enrollment = await client.query(
-            'SELECT * FROM SessionEnrollment WHERE EnrollmentID = $1',
+            `SELECT se.*, s.SessionStartDate, s.SessionName
+       FROM SessionEnrollment se
+       JOIN Session s ON se.SessionID = s.SessionID
+       WHERE se.EnrollmentID = $1`,
             [enrollmentId]
         );
 
@@ -116,7 +167,20 @@ exports.withdrawEnrollment = async (req, res) => {
             });
         }
 
-        const { sessionid, enrollmentstatus } = enrollment.rows[0];
+        const { sessionid, enrollmentstatus, sessionstartdate, sessionname } = enrollment.rows[0];
+
+        // Check if withdrawal is within deadline
+        const now = new Date();
+        const sessionStart = new Date(sessionstartdate);
+        const daysUntilSession = Math.ceil((sessionStart - now) / (1000 * 60 * 60 * 24));
+
+        if (daysUntilSession < WITHDRAWAL_DEADLINE_DAYS) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                error: `Cannot withdraw from "${sessionname}". Withdrawal deadline is ${WITHDRAWAL_DEADLINE_DAYS} days before session start. Only ${daysUntilSession} days remaining.`
+            });
+        }
 
         // Update enrollment status to withdrawn
         await client.query(
