@@ -175,19 +175,19 @@ function App() {
           className={activeTab === 'students' ? 'active' : ''}
           onClick={() => setActiveTab('students')}
         >
-          👦 My Children
+          My Students
         </button>
         <button
           className={activeTab === 'sessions' ? 'active' : ''}
           onClick={() => setActiveTab('sessions')}
         >
-          📚 Available Courses
+          Available Courses
         </button>
         <button
           className={activeTab === 'enrollments' ? 'active' : ''}
           onClick={() => setActiveTab('enrollments')}
         >
-          📋 My Enrollments
+          My Enrollments
         </button>
       </div>
 
@@ -305,7 +305,7 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
           <h3>{editingStudent ? 'Edit Child' : 'Add Child'}</h3>
           <input
             type="text"
-            placeholder="Child's Name *"
+            placeholder="Student's Name *"
             value={formData.studentName}
             onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
             required
