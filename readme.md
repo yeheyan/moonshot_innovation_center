@@ -11,7 +11,7 @@ moonshot_app/
 ├── middleware/           # Auth & validation middleware
 ├── routes/              # API routes
 ├── server.js            # Backend entry point
-├── .env                 # Environment variables (not in git)
+├── .env                 # Environment variables (Setup yourself)
 ├── package.json         # Backend dependencies
 └── frontend/
     └── moonshot-innovation-center/  # Parent portal (React app)
@@ -43,17 +43,9 @@ moonshot_app/
 
 ### 2. Database Setup
 
-```sql
--- Create database
-CREATE DATABASE your_database_name;
-
--- Connect to database and create schema
-\c your_database_name
-CREATE SCHEMA courses_management;
-SET search_path TO courses_management, public;
-
--- Run the database schema file (if provided)
--- \i path/to/schema.sql
+```ruby
+createdb -U postgres(or your username) innovation_courses(or name you want)
+psql -U postgres -h localhost -d innovation_courses
 ```
 
 ### 3. Backend Setup
@@ -86,7 +78,7 @@ npm start
 Backend will run on **http://localhost:5001**
 
 ### 4. Frontend Setup
-
+#### General Users
 ```bash
 # Open a new terminal window
 cd moonshot_app/frontend/moonshot-innovation-center
@@ -100,18 +92,24 @@ npm start
 
 Frontend will open at **http://localhost:3000**
 
-## Default Test Account
+You can register a new account to start.
 
-After running the database setup, create a test account:
+#### Admin Portal
+```bash
+# Open a new terminal window
+cd moonshot_app/frontend/admin_portal
 
-```sql
--- Set a user as admin (use after registering via UI)
-UPDATE User_Account 
-SET role = 'admin' 
-WHERE userphone = 'YOUR_PHONE_NUMBER';
+# Install frontend dependencies
+npm install
+
+# Start frontend
+npm start
 ```
 
-Or register a new account through the UI at http://localhost:3000
+Default admin account:
+
+Email: admin@moonshot.com
+Password: admin123
 
 ## Features
 
