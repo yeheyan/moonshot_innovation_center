@@ -11,7 +11,7 @@ moonshot_app/
 ├── middleware/           # Auth & validation middleware
 ├── routes/              # API routes
 ├── server.js            # Backend entry point
-├── .env                 # Environment variables (not in git)
+├── .env                 # Environment variables (not in git, you need to set this up)
 ├── package.json         # Backend dependencies
 └── frontend/
     └── moonshot-innovation-center/  # Parent portal (React app)
