@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Base URL for your backend API
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api'; // For local development
+const API_URL = process.env.REACT_APP_API_URL || 'https://moonshotinnovationcenter-production.up.railway.app/api';
 
 // Create axios instance with default config
 const api = axios.create({
