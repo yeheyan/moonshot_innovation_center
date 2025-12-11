@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict GsREdDPkDocgrQNdujZzJagODMNLNh0AjU11kCG31H6kyUafHTiriqVafoLPadC
+\restrict 30F7Dw6wyDbEfIOkwe2fdOfyTeQDwvhQcgjLZEqCDkUYdwvsjBcUMzx9qO6t9VG
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -1121,6 +1121,7 @@ COPY public.enrollmentaudit (auditid, enrollmentid, studentid, sessionid, oldsta
 26	28	11	6	\N	active	postgres	2025-12-02 15:05:41.00689	INSERT
 27	29	13	6	\N	active	postgres	2025-12-03 23:41:45.547999	INSERT
 28	29	13	6	active	withdrawn	postgres	2025-12-03 23:42:31.868406	UPDATE
+29	30	14	6	\N	active	postgres	2025-12-06 21:50:17.225503	INSERT
 \.
 
 
@@ -1134,6 +1135,7 @@ COPY public.order_transaction (orderid, userid, orderdate, discountamount, order
 19	7	2025-12-02 14:30:43.901631	0.00	2200.00	paid	2025-12-02 14:30:43.901631
 20	8	2025-12-02 15:05:41.00689	0.00	2200.00	paid	2025-12-02 15:05:41.00689
 21	7	2025-12-03 23:41:45.547999	0.00	2200.00	paid	2025-12-03 23:41:45.547999
+22	9	2025-12-06 21:50:17.225503	0.00	2200.00	paid	2025-12-06 21:50:17.225503
 \.
 
 
@@ -1154,6 +1156,7 @@ COPY public.payment (paymentid, orderid, paymentamount, paymentdate, paymentmeth
 10	19	2200.00	2025-12-02 14:30:43.914	wechat	completed
 11	20	2200.00	2025-12-02 15:05:41.029	wechat	completed
 12	21	2200.00	2025-12-03 23:41:45.561	wechat	completed
+13	22	2200.00	2025-12-06 21:50:17.294	wechat	completed
 \.
 
 
@@ -1165,7 +1168,7 @@ COPY public.session (sessionid, courseid, teacherid, sessionname, sessiondayofwe
 7	3	5	3D Printer-Sunday-Morning	Sunday	09:00:00	11:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
 9	5	3	Drone Design-Saturday-Evening	Saturday	18:00:00	20:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
 10	5	3	Drone Design-Sunday-Afternoon	Sunday	15:00:00	17:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
-6	3	5	3D Printer-Saturday-Afternoon	Saturday	14:00:00	16:00:00	4	2025-11-14 15:07:10.75308	2025-12-18
+6	3	5	3D Printer-Saturday-Afternoon	Saturday	14:00:00	16:00:00	6	2025-11-14 15:07:10.75308	2025-12-18
 3	1	1	Robotic Arm Design-Sunday-Moring	Sunday	09:00:00	11:00:00	0	2025-11-14 15:07:10.75308	2025-12-18
 4	2	2	Python 101-Saturday-Morning	Saturday	09:00:00	11:30:00	0	2025-11-14 15:07:10.75308	2025-12-18
 5	2	2	Python 101-Sunday-Afternoon	Sunday	14:00:00	16:30:00	0	2025-11-14 15:07:10.75308	2025-12-18
@@ -1189,6 +1192,7 @@ COPY public.sessionenrollment (enrollmentid, studentid, sessionid, orderid, enro
 27	10	6	19	active	2025-12-02 14:30:43.901631
 28	11	6	20	active	2025-12-02 15:05:41.00689
 29	13	6	21	withdrawn	2025-12-03 23:41:45.547999
+30	14	6	22	active	2025-12-06 21:50:17.225503
 \.
 
 
@@ -1208,6 +1212,7 @@ COPY public.student (studentid, userid, studentname, studentnationalid, studentb
 6	4	Ali	\N	2016-02-14	Grade 3	Willow Park Elementary School	\N	2025-11-14 15:07:10.749369
 7	5	Zack	\N	2012-07-08	Grade 7	Maple Elementary School	\N	2025-11-14 15:07:10.749369
 13	7	Joe	\N	2001-10-01	\N	\N	\N	2025-12-03 23:41:36.676347
+14	9	Venus	\N	2022-09-21	\N	\N	\N	2025-12-06 21:50:05.941395
 \.
 
 
@@ -1220,7 +1225,7 @@ COPY public.teacher (teacherid, teachername, teacherinfo, created_at) FROM stdin
 2	Park	Worked in Google for 10 years.	2025-11-14 15:07:10.745057
 3	Jisoo	Computer Science PHD. 100 published articles 	2025-11-14 15:07:10.745057
 4	Jennie	UC mathematics master. 10 years in teaching.	2025-11-14 15:07:10.745057
-5	Lisa	MIT Engineer PHD. Program lead.	2025-11-14 15:07:10.745057
+5	Lisa	MIT Engineer PhD. Program lead.	2025-11-14 15:07:10.745057
 \.
 
 
@@ -1259,14 +1264,14 @@ SELECT pg_catalog.setval('public.course_courseid_seq', 7, true);
 -- Name: enrollmentaudit_auditid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.enrollmentaudit_auditid_seq', 28, true);
+SELECT pg_catalog.setval('public.enrollmentaudit_auditid_seq', 29, true);
 
 
 --
 -- Name: order_transaction_orderid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.order_transaction_orderid_seq', 21, true);
+SELECT pg_catalog.setval('public.order_transaction_orderid_seq', 22, true);
 
 
 --
@@ -1280,7 +1285,7 @@ SELECT pg_catalog.setval('public.passwordresettokens_token_id_seq', 1, false);
 -- Name: payment_paymentid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.payment_paymentid_seq', 12, true);
+SELECT pg_catalog.setval('public.payment_paymentid_seq', 13, true);
 
 
 --
@@ -1294,14 +1299,14 @@ SELECT pg_catalog.setval('public.session_sessionid_seq', 12, true);
 -- Name: sessionenrollment_enrollmentid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sessionenrollment_enrollmentid_seq', 29, true);
+SELECT pg_catalog.setval('public.sessionenrollment_enrollmentid_seq', 30, true);
 
 
 --
 -- Name: student_studentid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.student_studentid_seq', 13, true);
+SELECT pg_catalog.setval('public.student_studentid_seq', 14, true);
 
 
 --
@@ -1447,10 +1452,38 @@ ALTER TABLE ONLY public.user_account
 
 
 --
+-- Name: idx_admin_email; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_admin_email ON public.admin USING btree (adminemail);
+
+
+--
+-- Name: idx_enrollment_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_date ON public.sessionenrollment USING btree (enrollmentdate);
+
+
+--
+-- Name: idx_enrollment_orderid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_orderid ON public.sessionenrollment USING btree (orderid);
+
+
+--
 -- Name: idx_enrollment_session; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_enrollment_session ON public.sessionenrollment USING btree (sessionid);
+
+
+--
+-- Name: idx_enrollment_sessionid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_sessionid ON public.sessionenrollment USING btree (sessionid);
 
 
 --
@@ -1468,10 +1501,59 @@ CREATE INDEX idx_enrollment_student ON public.sessionenrollment USING btree (stu
 
 
 --
+-- Name: idx_enrollment_studentid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_studentid ON public.sessionenrollment USING btree (studentid);
+
+
+--
+-- Name: idx_enrollment_unique_check; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_unique_check ON public.sessionenrollment USING btree (studentid, sessionid);
+
+
+--
+-- Name: idx_order_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_order_status ON public.order_transaction USING btree (orderstatus);
+
+
+--
 -- Name: idx_order_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_order_user ON public.order_transaction USING btree (userid);
+
+
+--
+-- Name: idx_order_userid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_order_userid ON public.order_transaction USING btree (userid);
+
+
+--
+-- Name: idx_payment_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_payment_date ON public.payment USING btree (paymentdate);
+
+
+--
+-- Name: idx_payment_orderid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_payment_orderid ON public.payment USING btree (orderid);
+
+
+--
+-- Name: idx_payment_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_payment_status ON public.payment USING btree (paymentstatus);
 
 
 --
@@ -1482,6 +1564,27 @@ CREATE INDEX idx_session_course ON public.session USING btree (courseid);
 
 
 --
+-- Name: idx_session_courseid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_session_courseid ON public.session USING btree (courseid);
+
+
+--
+-- Name: idx_session_schedule; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_session_schedule ON public.session USING btree (sessiondayofweek, sessionstarttime);
+
+
+--
+-- Name: idx_session_startdate; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_session_startdate ON public.session USING btree (sessionstartdate);
+
+
+--
 -- Name: idx_session_teacher; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1489,10 +1592,38 @@ CREATE INDEX idx_session_teacher ON public.session USING btree (teacherid);
 
 
 --
+-- Name: idx_session_teacherid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_session_teacherid ON public.session USING btree (teacherid);
+
+
+--
 -- Name: idx_student_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_student_user ON public.student USING btree (userid);
+
+
+--
+-- Name: idx_student_userid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_student_userid ON public.student USING btree (userid);
+
+
+--
+-- Name: idx_user_lastlogin; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_lastlogin ON public.user_account USING btree (last_login);
+
+
+--
+-- Name: idx_user_phone; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_phone ON public.user_account USING btree (userphone);
 
 
 --
@@ -1627,5 +1758,5 @@ ALTER TABLE ONLY public.student
 -- PostgreSQL database dump complete
 --
 
-\unrestrict GsREdDPkDocgrQNdujZzJagODMNLNh0AjU11kCG31H6kyUafHTiriqVafoLPadC
+\unrestrict 30F7Dw6wyDbEfIOkwe2fdOfyTeQDwvhQcgjLZEqCDkUYdwvsjBcUMzx9qO6t9VG
 

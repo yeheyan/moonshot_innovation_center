@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict I6CmkPF42WRrmSPtbQ4lWvaOqi2ItTIfFCMJO2BaTZXleVMzz9CWaLCQgz5Wykc
+\restrict HLUp7P5TsS4uXUiNsANAWbQ24gSQan26OsV1TK0KvtUTW7dgeNenMqF9RNAFaKa
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -1205,10 +1205,38 @@ ALTER TABLE ONLY public.user_account
 
 
 --
+-- Name: idx_admin_email; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_admin_email ON public.admin USING btree (adminemail);
+
+
+--
+-- Name: idx_enrollment_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_date ON public.sessionenrollment USING btree (enrollmentdate);
+
+
+--
+-- Name: idx_enrollment_orderid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_orderid ON public.sessionenrollment USING btree (orderid);
+
+
+--
 -- Name: idx_enrollment_session; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_enrollment_session ON public.sessionenrollment USING btree (sessionid);
+
+
+--
+-- Name: idx_enrollment_sessionid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_sessionid ON public.sessionenrollment USING btree (sessionid);
 
 
 --
@@ -1226,10 +1254,59 @@ CREATE INDEX idx_enrollment_student ON public.sessionenrollment USING btree (stu
 
 
 --
+-- Name: idx_enrollment_studentid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_studentid ON public.sessionenrollment USING btree (studentid);
+
+
+--
+-- Name: idx_enrollment_unique_check; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_enrollment_unique_check ON public.sessionenrollment USING btree (studentid, sessionid);
+
+
+--
+-- Name: idx_order_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_order_status ON public.order_transaction USING btree (orderstatus);
+
+
+--
 -- Name: idx_order_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_order_user ON public.order_transaction USING btree (userid);
+
+
+--
+-- Name: idx_order_userid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_order_userid ON public.order_transaction USING btree (userid);
+
+
+--
+-- Name: idx_payment_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_payment_date ON public.payment USING btree (paymentdate);
+
+
+--
+-- Name: idx_payment_orderid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_payment_orderid ON public.payment USING btree (orderid);
+
+
+--
+-- Name: idx_payment_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_payment_status ON public.payment USING btree (paymentstatus);
 
 
 --
@@ -1240,6 +1317,27 @@ CREATE INDEX idx_session_course ON public.session USING btree (courseid);
 
 
 --
+-- Name: idx_session_courseid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_session_courseid ON public.session USING btree (courseid);
+
+
+--
+-- Name: idx_session_schedule; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_session_schedule ON public.session USING btree (sessiondayofweek, sessionstarttime);
+
+
+--
+-- Name: idx_session_startdate; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_session_startdate ON public.session USING btree (sessionstartdate);
+
+
+--
 -- Name: idx_session_teacher; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1247,10 +1345,38 @@ CREATE INDEX idx_session_teacher ON public.session USING btree (teacherid);
 
 
 --
+-- Name: idx_session_teacherid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_session_teacherid ON public.session USING btree (teacherid);
+
+
+--
 -- Name: idx_student_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_student_user ON public.student USING btree (userid);
+
+
+--
+-- Name: idx_student_userid; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_student_userid ON public.student USING btree (userid);
+
+
+--
+-- Name: idx_user_lastlogin; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_lastlogin ON public.user_account USING btree (last_login);
+
+
+--
+-- Name: idx_user_phone; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_phone ON public.user_account USING btree (userphone);
 
 
 --
@@ -1385,5 +1511,5 @@ ALTER TABLE ONLY public.student
 -- PostgreSQL database dump complete
 --
 
-\unrestrict I6CmkPF42WRrmSPtbQ4lWvaOqi2ItTIfFCMJO2BaTZXleVMzz9CWaLCQgz5Wykc
+\unrestrict HLUp7P5TsS4uXUiNsANAWbQ24gSQan26OsV1TK0KvtUTW7dgeNenMqF9RNAFaKa
 

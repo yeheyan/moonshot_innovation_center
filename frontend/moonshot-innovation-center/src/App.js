@@ -294,15 +294,15 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
   return (
     <div className="students-tab">
       <div className="tab-header">
-        <h2>My Children</h2>
+        <h2>My Students</h2>
         {!showForm && (
-          <button onClick={() => setShowForm(true)}>+ Add Child</button>
+          <button onClick={() => setShowForm(true)}>+ Add Student</button>
         )}
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="student-form">
-          <h3>{editingStudent ? 'Edit Child' : 'Add Child'}</h3>
+          <h3>{editingStudent ? 'Edit Student' : 'Add Student'}</h3>
           <input
             type="text"
             placeholder="Student's Name *"
@@ -343,7 +343,7 @@ function StudentsTab({ students, onAddStudent, onUpdateStudent, onDeleteStudent 
 
       <div className="students-list">
         {students.length === 0 ? (
-          <p>No children added yet. Click "Add Child" to get started.</p>
+          <p>No students added yet. Click "Add Student" to get started.</p>
         ) : (
           students.map(student => (
             <div key={student.studentid} className="student-card">
@@ -420,12 +420,12 @@ function SessionsTab({ sessions, students, onEnroll }) {
 
       {students.length > 0 && (
         <div className="student-selector">
-          <label>Select child to enroll:</label>
+          <label>Select student to enroll:</label>
           <select
             value={selectedStudent}
             onChange={(e) => setSelectedStudent(e.target.value)}
           >
-            <option value="">-- Choose a child --</option>
+            <option value="">-- Choose a student --</option>
             {students.map(s => (
               <option key={s.studentid} value={s.studentid}>
                 {s.studentname}
@@ -544,7 +544,7 @@ function EnrollmentsTab({ students, onWithdraw }) {
       <h2>My Enrollments</h2>
 
       {students.length === 0 ? (
-        <p>No children added yet.</p>
+        <p>No students added yet.</p>
       ) : (
         students.map(student => (
           <div key={student.studentid} className="student-enrollments">
