@@ -19,9 +19,9 @@ const login = async (req, res) => {
 
         // Get admin from database
         const result = await db.query(
-            `SELECT AdminID, AdminName, AdminEmail, password_hash, AdminRole
-       FROM Admin
-       WHERE AdminEmail = $1`,
+            `SELECT adminid, adminname, adminemail, password_hash, adminrole
+            FROM admin
+            WHERE adminemail = $1`,
             [adminEmail]
         );
 
