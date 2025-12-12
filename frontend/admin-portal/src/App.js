@@ -385,7 +385,6 @@ function CoursesView({ setMessage }) {
       )}
 
       <div className="courses-grid">
-        // In the courses-grid mapping
         {courses.map(course => (
           <div
             key={course.courseid}
