@@ -53,7 +53,7 @@ BEGIN
         INSERT INTO EnrollmentAudit (EnrollmentID, StudentID, SessionID, OldStatus, Operation)
         VALUES (OLD.EnrollmentID, OLD.StudentID, OLD.SessionID, OLD.EnrollmentStatus, 'DELETE');
     END IF;
-    
+
     IF TG_OP = 'DELETE' THEN
         RETURN OLD;
     ELSE
@@ -80,20 +80,20 @@ BEGIN
     IF NEW.EnrollmentStatus != 'active' THEN
         RETURN NEW;
     END IF;
-    
+
     -- Get session capacity and current enrollment
     SELECT c.CourseMaxEnroll, s.EnrolledCount
     INTO v_max_capacity, v_current_enrolled
     FROM Session s
     JOIN Course c ON s.CourseID = c.CourseID
     WHERE s.SessionID = NEW.SessionID;
-    
+
     -- Check if over capacity
     IF v_current_enrolled >= v_max_capacity THEN
-        RAISE EXCEPTION 'Session is full. Capacity: %, Current enrolled: %', 
+        RAISE EXCEPTION 'Session is full. Capacity: %, Current enrolled: %',
             v_max_capacity, v_current_enrolled;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$;
@@ -118,9 +118,9 @@ BEGIN
     WHERE se.SessionID = s.SessionID
     AND s.CourseID = p_course_id
     AND se.EnrollmentStatus = 'active';
-    
+
     GET DIAGNOSTICS v_count = ROW_COUNT;
-    
+
     RETURN QUERY SELECT v_count, format('Completed %s enrollments for course', v_count);
 END;
 $$;
@@ -145,26 +145,26 @@ DECLARE
 BEGIN
     -- Check 1: Verify student belongs to parent
     IF NOT EXISTS (
-        SELECT 1 FROM Student 
+        SELECT 1 FROM Student
         WHERE StudentID = p_student_id AND UserID = p_user_id
     ) THEN
         RETURN QUERY SELECT FALSE, 'Student does not belong to this parent', NULL::INTEGER, NULL::INTEGER;
         RETURN;
     END IF;
-    
+
     -- Check 2: Check for existing active enrollment
     SELECT EnrollmentID INTO v_existing_enrollment
     FROM SessionEnrollment
-    WHERE StudentID = p_student_id 
+    WHERE StudentID = p_student_id
     AND EnrollmentStatus IN ('active', 'waitlisted');
-    
+
     IF v_existing_enrollment IS NOT NULL THEN
         RETURN QUERY SELECT FALSE, 'Student already has an active enrollment', NULL::INTEGER, NULL::INTEGER;
         RETURN;
     END IF;
-    
+
     -- Check 3: Check session capacity
-    SELECT 
+    SELECT
         s.EnrolledCount,
         c.CourseMaxEnroll,
         s.SessionName
@@ -172,41 +172,41 @@ BEGIN
     FROM Session s
     JOIN Course c ON s.CourseID = c.CourseID
     WHERE s.SessionID = p_session_id;
-    
+
     -- Get student name for messages
     SELECT StudentName INTO v_student_name FROM Student WHERE StudentID = p_student_id;
-    
+
     -- Start enrollment process
     IF v_capacity_check.EnrolledCount >= v_capacity_check.CourseMaxEnroll THEN
         -- Add to waitlist
         INSERT INTO SessionEnrollment (StudentID, SessionID, OrderID, EnrollmentStatus)
         VALUES (p_student_id, p_session_id, NULL, 'waitlisted')
         RETURNING EnrollmentID INTO v_enrollment_id;
-        
+
         RETURN QUERY SELECT TRUE, format('Student %s added to waitlist for %s', v_student_name, v_capacity_check.SessionName), NULL::INTEGER, v_enrollment_id;
     ELSE
         -- Create order
         INSERT INTO Order_Transaction (UserID, OrderTotal, OrderStatus, OrderDate)
         VALUES (p_user_id, p_payment_amount, 'pending', CURRENT_TIMESTAMP)
         RETURNING OrderID INTO v_order_id;
-        
+
         -- Create enrollment
         INSERT INTO SessionEnrollment (StudentID, SessionID, OrderID, EnrollmentStatus)
         VALUES (p_student_id, p_session_id, v_order_id, 'active')
         RETURNING EnrollmentID INTO v_enrollment_id;
-        
+
         -- Process payment
         INSERT INTO Payment (OrderID, PaymentAmount, PaymentMethod, PaymentStatus)
         VALUES (v_order_id, p_payment_amount, 'pending', 'pending');
-        
+
         -- Update order status
-        UPDATE Order_Transaction 
-        SET OrderStatus = 'paid' 
+        UPDATE Order_Transaction
+        SET OrderStatus = 'paid'
         WHERE OrderID = v_order_id;
-        
+
         RETURN QUERY SELECT TRUE, format('Student %s successfully enrolled in %s', v_student_name, v_capacity_check.SessionName), v_order_id, v_enrollment_id;
     END IF;
-    
+
 EXCEPTION
     WHEN OTHERS THEN
         RETURN QUERY SELECT FALSE, format('Error: %s', SQLERRM), NULL::INTEGER, NULL::INTEGER;
@@ -232,29 +232,29 @@ DECLARE
     v_existing_enrollment INTEGER;
 BEGIN
     -- [Previous checks remain the same...]
-    
+
     -- Check 1: Verify student belongs to parent
     IF NOT EXISTS (
-        SELECT 1 FROM Student 
+        SELECT 1 FROM Student
         WHERE StudentID = p_student_id AND UserID = p_user_id
     ) THEN
         RETURN QUERY SELECT FALSE, 'Student does not belong to this parent', NULL::INTEGER, NULL::INTEGER;
         RETURN;
     END IF;
-    
+
     -- Check 2: Check for existing active enrollment
     SELECT EnrollmentID INTO v_existing_enrollment
     FROM SessionEnrollment
-    WHERE StudentID = p_student_id 
+    WHERE StudentID = p_student_id
     AND EnrollmentStatus IN ('active', 'waitlisted');
-    
+
     IF v_existing_enrollment IS NOT NULL THEN
         RETURN QUERY SELECT FALSE, 'Student already has an active enrollment', NULL::INTEGER, NULL::INTEGER;
         RETURN;
     END IF;
-    
+
     -- Check 3: Check session capacity
-    SELECT 
+    SELECT
         s.EnrolledCount,
         c.CourseMaxEnroll,
         s.SessionName
@@ -262,40 +262,40 @@ BEGIN
     FROM Session s
     JOIN Course c ON s.CourseID = c.CourseID
     WHERE s.SessionID = p_session_id;
-    
+
     -- Get student name
     SELECT StudentName INTO v_student_name FROM Student WHERE StudentID = p_student_id;
-    
+
     IF v_capacity_check.EnrolledCount >= v_capacity_check.CourseMaxEnroll THEN
         -- Add to waitlist
         INSERT INTO SessionEnrollment (StudentID, SessionID, OrderID, EnrollmentStatus)
         VALUES (p_student_id, p_session_id, NULL, 'waitlisted')
         RETURNING EnrollmentID INTO v_enrollment_id;
-        
+
         RETURN QUERY SELECT TRUE, format('Student %s added to waitlist for %s', v_student_name, v_capacity_check.SessionName), NULL::INTEGER, v_enrollment_id;
     ELSE
         -- Create order
         INSERT INTO Order_Transaction (UserID, OrderTotal, OrderStatus, OrderDate)
         VALUES (p_user_id, p_payment_amount, 'pending', CURRENT_TIMESTAMP)
         RETURNING OrderID INTO v_order_id;
-        
+
         -- Create enrollment
         INSERT INTO SessionEnrollment (StudentID, SessionID, OrderID, EnrollmentStatus)
         VALUES (p_student_id, p_session_id, v_order_id, 'active')
         RETURNING EnrollmentID INTO v_enrollment_id;
-        
+
         -- Process payment with the provided payment method
         INSERT INTO Payment (OrderID, PaymentAmount, PaymentMethod, PaymentStatus)
         VALUES (v_order_id, p_payment_amount, p_payment_method, 'completed');  -- Use the parameter
-        
+
         -- Update order status
-        UPDATE Order_Transaction 
-        SET OrderStatus = 'paid' 
+        UPDATE Order_Transaction
+        SET OrderStatus = 'paid'
         WHERE OrderID = v_order_id;
-        
+
         RETURN QUERY SELECT TRUE, format('Student %s successfully enrolled in %s', v_student_name, v_capacity_check.SessionName), v_order_id, v_enrollment_id;
     END IF;
-    
+
 EXCEPTION
     WHEN OTHERS THEN
         RETURN QUERY SELECT FALSE, format('Error: %s', SQLERRM), NULL::INTEGER, NULL::INTEGER;
@@ -314,7 +314,7 @@ CREATE FUNCTION public.get_available_sessions(p_student_id integer) RETURNS TABL
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         s.SessionID,
         c.CourseName,
         s.SessionName,
@@ -324,7 +324,7 @@ BEGIN
         s.SessionEndTime,
         c.CourseMaxEnroll - s.EnrolledCount as available_spots,
         c.CoursePrice,
-        CASE 
+        CASE
             WHEN c.CourseMaxEnroll - s.EnrolledCount > 0 THEN 'Available'
             ELSE 'Waitlist Only'
         END as status
@@ -355,7 +355,7 @@ CREATE FUNCTION public.get_enrollment_report(p_start_date date DEFAULT (CURRENT_
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         c.CourseName,
         COUNT(se.EnrollmentID) as total_enrollments,
         COUNT(CASE WHEN se.EnrollmentStatus = 'active' THEN 1 END) as active_enrollments,
@@ -390,7 +390,7 @@ DECLARE
     v_days_attended INTEGER;
 BEGIN
     -- Get enrollment details
-    SELECT 
+    SELECT
         se.*,
         ot.OrderTotal,
         ot.OrderStatus,
@@ -402,22 +402,22 @@ BEGIN
     JOIN Session s ON se.SessionID = s.SessionID
     JOIN Student st ON se.StudentID = st.StudentID
     WHERE se.EnrollmentID = p_enrollment_id;
-    
+
     IF NOT FOUND THEN
         RETURN QUERY SELECT FALSE, 'Enrollment not found', 0::DECIMAL;
         RETURN;
     END IF;
-    
+
     -- Check if already refunded
     IF v_enrollment.OrderStatus = 'refunded' THEN
         RETURN QUERY SELECT FALSE, 'Already refunded', 0::DECIMAL;
         RETURN;
     END IF;
-    
+
     -- Calculate refund amount (example: prorated based on time)
     -- For simplicity, full refund if withdrawn within 7 days
     v_days_attended := EXTRACT(DAY FROM CURRENT_TIMESTAMP - v_enrollment.EnrollmentDate);
-    
+
     IF v_days_attended <= 7 THEN
         v_refund_amount := v_enrollment.OrderTotal;
     ELSIF v_days_attended <= 14 THEN
@@ -425,25 +425,25 @@ BEGIN
     ELSE
         v_refund_amount := 0;
     END IF;
-    
+
     -- Process refund
     IF v_refund_amount > 0 THEN
         -- Update enrollment status
-        UPDATE SessionEnrollment 
+        UPDATE SessionEnrollment
         SET EnrollmentStatus = 'withdrawn'
         WHERE EnrollmentID = p_enrollment_id;
-        
+
         -- Update order status
-        UPDATE Order_Transaction 
+        UPDATE Order_Transaction
         SET OrderStatus = 'refunded'
         WHERE OrderID = v_enrollment.OrderID;
-        
+
         -- Create refund payment record
         INSERT INTO Payment (OrderID, PaymentAmount, PaymentMethod, PaymentStatus)
         VALUES (v_enrollment.OrderID, -v_refund_amount, 'refund', 'completed');
-        
-        RETURN QUERY SELECT TRUE, 
-            format('Refund of %.2f processed for %s', v_refund_amount, v_enrollment.StudentName), 
+
+        RETURN QUERY SELECT TRUE,
+            format('Refund of %.2f processed for %s', v_refund_amount, v_enrollment.StudentName),
             v_refund_amount;
     ELSE
         RETURN QUERY SELECT FALSE, 'No refund available (past refund period)', 0::DECIMAL;
@@ -469,22 +469,22 @@ BEGIN
         -- Find the first waitlisted student for this session
         SELECT * INTO v_waitlist_student
         FROM SessionEnrollment
-        WHERE SessionID = NEW.SessionID 
+        WHERE SessionID = NEW.SessionID
           AND EnrollmentStatus = 'waitlisted'
         ORDER BY EnrollmentDate
         LIMIT 1;
-        
+
         -- If found, promote them
         IF FOUND THEN
             UPDATE SessionEnrollment
             SET EnrollmentStatus = 'active'
             WHERE EnrollmentID = v_waitlist_student.EnrollmentID;
-            
-            RAISE NOTICE 'Student % promoted from waitlist for session %', 
+
+            RAISE NOTICE 'Student % promoted from waitlist for session %',
                 v_waitlist_student.StudentID, NEW.SessionID;
         END IF;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$;
@@ -503,25 +503,25 @@ BEGIN
     -- For INSERT or UPDATE to 'active'
     IF (TG_OP = 'INSERT' AND NEW.EnrollmentStatus = 'active') OR
        (TG_OP = 'UPDATE' AND NEW.EnrollmentStatus = 'active' AND OLD.EnrollmentStatus != 'active') THEN
-        UPDATE Session 
-        SET EnrolledCount = EnrolledCount + 1 
+        UPDATE Session
+        SET EnrolledCount = EnrolledCount + 1
         WHERE SessionID = NEW.SessionID;
     END IF;
-    
+
     -- For UPDATE from 'active' to something else
     IF TG_OP = 'UPDATE' AND OLD.EnrollmentStatus = 'active' AND NEW.EnrollmentStatus != 'active' THEN
-        UPDATE Session 
-        SET EnrolledCount = EnrolledCount - 1 
+        UPDATE Session
+        SET EnrolledCount = EnrolledCount - 1
         WHERE SessionID = NEW.SessionID;
     END IF;
-    
+
     -- For DELETE of 'active' enrollment
     IF TG_OP = 'DELETE' AND OLD.EnrollmentStatus = 'active' THEN
-        UPDATE Session 
-        SET EnrolledCount = EnrolledCount - 1 
+        UPDATE Session
+        SET EnrolledCount = EnrolledCount - 1
         WHERE SessionID = OLD.SessionID;
     END IF;
-    
+
     IF TG_OP = 'DELETE' THEN
         RETURN OLD;
     ELSE
@@ -962,15 +962,21 @@ ALTER SEQUENCE public.teacher_teacherid_seq OWNED BY public.teacher.teacherid;
 -- Name: user_account; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.user_account (
+CREATE TABLE public.user_account
+(
     userid integer NOT NULL,
     username character varying(100) NOT NULL,
-    userphone character varying(20) NOT NULL,
+    userphone character varying(20) UNIQUE,
+    -- NEW: UNIQUE but nullable
+    wechat_openid character varying(100) UNIQUE,
+    -- NEW: Added for WeChat login
     userwechat character varying(100),
     useraddress character varying(255),
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp
+    without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    password_hash character varying(255),
+    password_hash character varying
+    (255),
     last_login timestamp without time zone
 );
 
