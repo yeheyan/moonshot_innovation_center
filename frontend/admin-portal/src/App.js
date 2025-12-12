@@ -385,24 +385,45 @@ function CoursesView({ setMessage }) {
       )}
 
       <div className="courses-grid">
+        // In the courses-grid mapping
         {courses.map(course => (
           <div
             key={course.courseid}
             className={`course-card ${selectedCourse?.courseid === course.courseid ? 'selected' : ''}`}
             onClick={() => setSelectedCourse(course)}
           >
+            {/* Add image preview */}
+            {course.cover_image_url && (
+              <div className="course-image-preview">
+                <img src={course.cover_image_url} alt={course.coursename} />
+              </div>
+            )}
+
             <div className="course-card-header">
               <h3>{course.coursename}</h3>
               <span className={`status-badge ${course.coursestatus}`}>
                 {course.coursestatus}
               </span>
             </div>
+
+            {/* Add grade range display */}
+            {(course.min_grade || course.max_grade) && (
+              <div className="course-grade-range">
+                <span className="grade-label">适合年级:</span>
+                <span className="grade-value">
+                  {course.min_grade || '?'} - {course.max_grade || '?'}
+                </span>
+              </div>
+            )}
+
             <p className="course-description">{course.coursedescription}</p>
+
             <div className="course-meta">
-              <span>Price: ${course.courseprice}</span>
+              <span>Price: ¥{course.courseprice}</span>
               <span>Max: {course.coursemaxenroll}</span>
               <span>Sessions: {course.session_count}</span>
             </div>
+
             <div className="course-actions">
               <button
                 onClick={(e) => {
