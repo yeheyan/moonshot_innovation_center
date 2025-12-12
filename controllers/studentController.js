@@ -38,22 +38,36 @@ exports.getStudentsByParent = async (req, res) => {
 exports.addStudent = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { studentName, studentNationalID, studentBirthDate, studentGrade, studentSchool } = req.body;
+        const {
+            studentName,
+            studentNickname,
+            studentGender,
+            studentNationalID,
+            studentBirthDate,
+            studentGrade,
+            studentSchool,
+            studentPhone,
+            studentAddress
+        } = req.body;
 
         // Validate required fields
-        if (!studentName) {
+        if (!studentName || !studentGender || !studentNationalID ||
+            !studentBirthDate || !studentGrade || !studentSchool || !studentPhone) {
             return res.status(400).json({
                 success: false,
-                error: 'Student name is required'
+                error: 'Name, gender, national ID, birthday, grade, school, and phone are required'
             });
         }
 
         const result = await db.query(
-            `INSERT INTO Student (
-        UserID, StudentName, StudentNationalID, StudentBirthDate, StudentGrade, StudentSchool
-      ) VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO student (
+        userid, studentname, student_nickname, student_gender,
+        studentnationalid, studentbirthdate, studentgrade, studentschool,
+        student_phone, student_address
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
-            [userId, studentName, studentNationalID || null, studentBirthDate || null, studentGrade || null, studentSchool || null]
+            [userId, studentName, studentNickname || null, studentGender, studentNationalID,
+                studentBirthDate, studentGrade, studentSchool, studentPhone, studentAddress || null]
         );
 
         res.status(201).json({
