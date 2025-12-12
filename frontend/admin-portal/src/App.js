@@ -446,19 +446,82 @@ function CourseForm({ course, onSubmit, onCancel }) {
     courseDescription: course?.coursedescription || '',
     coursePrice: course?.courseprice || '',
     courseMaxEnroll: course?.coursemaxenroll || '',
-    courseStatus: course?.coursestatus || 'active'
+    courseStatus: course?.coursestatus || 'active',
+    minGrade: course?.min_grade || '',
+    maxGrade: course?.max_grade || '',
+    coverImageUrl: course?.cover_image_url || ''
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(course?.cover_image_url || '');
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    let imageUrl = formData.coverImageUrl;
+
+    // If new image selected, upload first
+    if (imageFile) {
+      // For now, convert to base64 and store (simple but not ideal)
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const submitData = {
+          ...formData,
+          coverImageUrl: reader.result  // Base64 string
+        };
+        onSubmit(submitData);
+      };
+      reader.readAsDataURL(imageFile);
+    } else {
+      onSubmit(formData);
+    }
+  };
+
+  const gradeOptions = [
+    '1年级', '2年级', '3年级', '4年级', '5年级', '6年级',
+    '初一', '初二', '初三',
+    '高一', '高二', '高三'
+  ];
 
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <h3>{course ? 'Edit Course' : 'Add New Course'}</h3>
         <form onSubmit={handleSubmit}>
+
+          {/* Image Upload */}
+          <div className="form-group">
+            <label>Course Image</label>
+            {imagePreview && (
+              <img src={imagePreview} alt="Preview" style={{ width: '200px', height: '150px', objectFit: 'cover', borderRadius: '8px', marginBottom: '10px' }} />
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+            />
+            <small style={{ color: '#718096' }}>Or paste image URL below</small>
+            <input
+              type="url"
+              placeholder="Image URL (https://...)"
+              value={formData.coverImageUrl}
+              onChange={(e) => setFormData({ ...formData, coverImageUrl: e.target.value })}
+            />
+          </div>
+
           <div className="form-group">
             <label>Course Name *</label>
             <input
@@ -478,6 +541,36 @@ function CourseForm({ course, onSubmit, onCancel }) {
             />
           </div>
 
+          {/* Grade Range */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Minimum Grade</label>
+              <select
+                value={formData.minGrade}
+                onChange={(e) => setFormData({ ...formData, minGrade: e.target.value })}
+              >
+                <option value="">Select grade</option>
+                {gradeOptions.map(grade => (
+                  <option key={grade} value={grade}>{grade}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Maximum Grade</label>
+              <select
+                value={formData.maxGrade}
+                onChange={(e) => setFormData({ ...formData, maxGrade: e.target.value })}
+              >
+                <option value="">Select grade</option>
+                {gradeOptions.map(grade => (
+                  <option key={grade} value={grade}>{grade}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Price and Capacity */}
           <div className="form-row">
             <div className="form-group">
               <label>Price *</label>
