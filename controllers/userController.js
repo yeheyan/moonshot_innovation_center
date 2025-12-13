@@ -8,7 +8,7 @@ exports.getUserProfile = async (req, res) => {
         const { userId } = req.params;
 
         const result = await db.query(
-            `SELECT userid, username, userphone, userwechat, useraddress, wechat_openid, last_login
+            `SELECT userid, username, userphone, userwechat, useraddress, wechat_openid, avatar_url, last_login
              FROM user_account
              WHERE userid = $1`,
             [userId]
@@ -39,17 +39,18 @@ exports.getUserProfile = async (req, res) => {
 exports.updateUserProfile = async (req, res) => {
     try {
         const { userId } = req.params;
-        const { userName, realName, userPhone } = req.body;
+        const { userName, realName, userPhone, avatarUrl } = req.body;
 
         console.log('Updating user profile:', userId, req.body);
 
         const result = await db.query(
             `UPDATE user_account
              SET username = COALESCE($1, username),
-                 userphone = COALESCE($2, userphone)
-             WHERE userid = $3
-             RETURNING userid, username, userphone`,
-            [userName, userPhone, userId]
+                 userphone = COALESCE($2, userphone),
+                 avatar_url = COALESCE($3, avatar_url)
+             WHERE userid = $4
+             RETURNING userid, username, userphone, avatar_url`,
+            [userName, userPhone, avatarUrl, userId]
         );
 
         if (result.rows.length === 0) {
@@ -110,6 +111,58 @@ exports.getUserEnrollmentStats = async (req, res) => {
     }
 };
 
+// Get user's enrollments (courses)
+exports.getUserEnrollments = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const result = await db.query(`
+            SELECT
+                se.enrollmentid,
+                se.sessionid,
+                se.studentid,
+                se.orderid,
+                se.enrollmentstatus,
+                se.enrollmentdate,
+                s.sessionname,
+                s.sessiondayofweek,
+                s.sessionstarttime,
+                s.sessionendtime,
+                s.startdate,
+                s.enddate,
+                c.coursename,
+                c.courseprice,
+                t.teachername,
+                st.studentname,
+                ot.ordertotal,
+                ot.orderstatus,
+                p.paymentstatus
+            FROM sessionenrollment se
+            JOIN session s ON se.sessionid = s.sessionid
+            JOIN course c ON s.courseid = c.courseid
+            LEFT JOIN teacher t ON s.teacherid = t.teacherid
+            JOIN student st ON se.studentid = st.studentid
+            LEFT JOIN order_transaction ot ON se.orderid = ot.orderid
+            LEFT JOIN payment p ON ot.orderid = p.orderid
+            WHERE st.userid = $1
+            AND se.enrollmentstatus != 'withdrawn'
+            ORDER BY se.enrollmentdate DESC
+        `, [userId]);
+
+        res.json({
+            success: true,
+            data: result.rows
+        });
+
+    } catch (error) {
+        console.error('Get user enrollments error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
 // Get user's students (children/learners)
 exports.getUserStudents = async (req, res) => {
     try {
@@ -135,4 +188,12 @@ exports.getUserStudents = async (req, res) => {
             error: error.message
         });
     }
+};
+
+module.exports = {
+    getUserProfile,
+    updateUserProfile,
+    getUserEnrollments,
+    getUserEnrollmentStats,
+    getUserStudents
 };
