@@ -76,7 +76,7 @@ exports.updateUserProfile = async (req, res) => {
 };
 
 // Get user's enrollment stats
-const getUserEnrollmentStats = async (req, res) => {
+exports.getUserEnrollmentStats = async (req, res) => {
     try {
         const { userId } = req.params;
 
