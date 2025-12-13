@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 // Base URL for admin API
-// const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api'; // Local development URL
 const API_URL = process.env.REACT_APP_API_URL || 'https://moonshotinnovationcenter-production.up.railway.app/api';
 
 // Create axios instance
@@ -39,12 +38,23 @@ export const getCurrentAdmin = () => {
 };
 
 // ============================================
+// SYSTEM CONFIG (NEW!)
+// ============================================
+
+export const getSystemConfig = () => {
+    return adminApi.get('/config');
+};
+
+export const updateSystemConfig = (data) => {
+    return adminApi.put('/config', data);
+};
+
+// ============================================
 // DASHBOARD STATS
 // ============================================
 
 export const getDashboardStats = async () => {
     try {
-        // Get stats from multiple endpoints
         const [enrollmentStats, coursesRes, sessionsRes, studentsRes, usersRes] = await Promise.all([
             adminApi.get('/enrollments/stats'),
             adminApi.get('/courses'),
@@ -62,7 +72,6 @@ export const getDashboardStats = async () => {
         };
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
-        // Return default values if fetch fails
         return {
             enrollments: {
                 total_enrollments: 0,
@@ -82,162 +91,91 @@ export const getDashboardStats = async () => {
 // COURSE MANAGEMENT
 // ============================================
 
-export const getAllCourses = () => {
-    return adminApi.get('/courses');
-};
-
-export const getCourseById = (courseId) => {
-    return adminApi.get(`/courses/${courseId}`);
-};
-
-export const createCourse = (courseData) => {
-    return adminApi.post('/courses', courseData);
-};
-
-export const updateCourse = (courseId, courseData) => {
-    return adminApi.put(`/courses/${courseId}`, courseData);
-};
-
-export const deleteCourse = (courseId) => {
-    return adminApi.delete(`/courses/${courseId}`);
-};
+export const getAllCourses = () => adminApi.get('/courses');
+export const getCourseById = (courseId) => adminApi.get(`/courses/${courseId}`);
+export const createCourse = (courseData) => adminApi.post('/courses', courseData);
+export const updateCourse = (courseId, courseData) => adminApi.put(`/courses/${courseId}`, courseData);
+export const deleteCourse = (courseId) => adminApi.delete(`/courses/${courseId}`);
 
 // ============================================
 // SESSION MANAGEMENT
 // ============================================
 
-export const getAllSessions = (params) => {
-    return adminApi.get('/sessions', { params });
-};
-
-export const getSessionById = (sessionId) => {
-    return adminApi.get(`/sessions/${sessionId}`);
-};
-
-export const createSession = (sessionData) => {
-    return adminApi.post('/sessions', sessionData);
-};
-
-export const updateSession = (sessionId, sessionData) => {
-    return adminApi.put(`/sessions/${sessionId}`, sessionData);
-};
-
-export const deleteSession = (sessionId) => {
-    return adminApi.delete(`/sessions/${sessionId}`);
-};
+export const getAllSessions = (params) => adminApi.get('/sessions', { params });
+export const getSessionById = (sessionId) => adminApi.get(`/sessions/${sessionId}`);
+export const createSession = (sessionData) => adminApi.post('/sessions', sessionData);
+export const updateSession = (sessionId, sessionData) => adminApi.put(`/sessions/${sessionId}`, sessionData);
+export const deleteSession = (sessionId) => adminApi.delete(`/sessions/${sessionId}`);
 
 // ============================================
 // STUDENT MANAGEMENT
 // ============================================
 
-export const getAllStudents = () => {
-    return adminApi.get('/students');
-};
-
-export const getStudentById = (studentId) => {
-    return adminApi.get(`/students/${studentId}`);
-};
-
-export const getStudentEnrollments = (studentId) => {
-    return adminApi.get(`/students/${studentId}/enrollments`);
-};
+export const getAllStudents = () => adminApi.get('/students');
+export const getStudentById = (studentId) => adminApi.get(`/students/${studentId}`);
+export const getStudentEnrollments = (studentId) => adminApi.get(`/students/${studentId}/enrollments`);
+export const getAllStudentsAdmin = () => adminApi.get('/admin/students');
+export const getStudentDetails = (studentId) => adminApi.get(`/students/${studentId}`);
 
 // ============================================
 // ENROLLMENT MANAGEMENT
 // ============================================
 
-// export const getAllEnrollments = () => {
-//     return adminApi.get('/enrollments');
-// };
+export const getAllEnrollmentsAdmin = (params) => adminApi.get('/admin/enrollments', { params });
+export const updateEnrollmentStatus = (enrollmentId, status) => adminApi.put(`/admin/enrollments/${enrollmentId}/status`, { status });
 
-// export const getEnrollmentStats = () => {
-//     return adminApi.get('/enrollments/stats');
-// };
-
-// export const updateEnrollmentStatus = (enrollmentId, status) => {
-//     return adminApi.put(`/enrollments/${enrollmentId}/status`, { status });
-// };
-
-// ============================================
-// ENROLLMENT MANAGEMENT
-// ============================================
-
-export const getAllEnrollmentsAdmin = (params) => {
-    return adminApi.get('/admin/enrollments', { params });
-};
-
-export const updateEnrollmentStatus = (enrollmentId, status) => {
-    return adminApi.put(`/admin/enrollments/${enrollmentId}/status`, { status });
-};
 // ============================================
 // TEACHER MANAGEMENT
 // ============================================
 
-export const getAllTeachers = () => {
-    return adminApi.get('/teachers');
-};
-
-export const createTeacher = (teacherData) => {
-    return adminApi.post('/teachers', teacherData);
-};
-
-export const updateTeacher = (teacherId, teacherData) => {
-    return adminApi.put(`/teachers/${teacherId}`, teacherData);
-};
-
-export const deleteTeacher = (teacherId) => {
-    return adminApi.delete(`/teachers/${teacherId}`);
-};
+export const getAllTeachers = () => adminApi.get('/teachers');
+export const createTeacher = (teacherData) => adminApi.post('/teachers', teacherData);
+export const updateTeacher = (teacherId, teacherData) => adminApi.put(`/teachers/${teacherId}`, teacherData);
+export const deleteTeacher = (teacherId) => adminApi.delete(`/teachers/${teacherId}`);
 
 // ============================================
-// STUDENT MANAGEMENT (ADMIN)
+// USER MANAGEMENT
 // ============================================
 
-export const getAllStudentsAdmin = () => {
-    return adminApi.get('/admin/students');
-};
-
-export const getStudentDetails = (studentId) => {
-    return adminApi.get(`/students/${studentId}`);
-};
-
-export const getAllUsers = () => {
-    return adminApi.get('/admin/users');
-};
-
-export const getUserById = (userId) => {
-    return adminApi.get(`/admin/users/${userId}`);
-};
-
+export const getAllUsers = () => adminApi.get('/admin/users');
+export const getUserById = (userId) => adminApi.get(`/admin/users/${userId}`);
 
 // Export default object
 export default {
     adminLogin,
     getCurrentAdmin,
+    // Config (NEW!)
+    getSystemConfig,
+    updateSystemConfig,
+    // Dashboard
     getDashboardStats,
+    // Courses
     getAllCourses,
     getCourseById,
     createCourse,
     updateCourse,
     deleteCourse,
+    // Sessions
     getAllSessions,
     getSessionById,
     createSession,
     updateSession,
     deleteSession,
+    // Students
     getAllStudents,
     getStudentById,
     getStudentEnrollments,
-    getAllUsers,
-    getUserById,
-    // getAllEnrollments,
-    // getEnrollmentStats,
+    getAllStudentsAdmin,
+    getStudentDetails,
+    // Enrollments
     getAllEnrollmentsAdmin,
     updateEnrollmentStatus,
+    // Teachers
     getAllTeachers,
     createTeacher,
     updateTeacher,
     deleteTeacher,
-    getAllStudentsAdmin,
-    getStudentDetails,
+    // Users
+    getAllUsers,
+    getUserById
 };

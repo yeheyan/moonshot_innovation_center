@@ -1630,7 +1630,10 @@ function TeacherForm({ teacher, onSubmit, onCancel }) {
   );
 }
 
-function Settings() {
+// ==================== SETTINGS VIEW ====================
+// Add this component to your App.js (at the bottom, before "export default App;")
+
+function SettingsView({ setMessage }) {
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1642,10 +1645,9 @@ function Settings() {
 
   const loadConfigs = async () => {
     try {
-      const response = await api.get('/config');
+      const response = await adminApi.getSystemConfig();  // Use adminApi, not direct import
       if (response.data.success) {
         setConfigs(response.data.data);
-        // 初始化编辑值
         const values = {};
         response.data.data.forEach(c => {
           values[c.config_key] = c.config_value;
@@ -1654,6 +1656,7 @@ function Settings() {
       }
     } catch (error) {
       console.error('Load configs error:', error);
+      setMessage('Error loading settings: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -1673,87 +1676,90 @@ function Settings() {
         key,
         value: editedValues[key]
       }));
-
-      await api.put('/config', { configs: configsToUpdate });
-      alert('配置保存成功！');
+      await adminApi.updateSystemConfig({ configs: configsToUpdate });  // Use adminApi
+      setMessage('设置保存成功！');
       loadConfigs();
     } catch (error) {
       console.error('Save configs error:', error);
-      alert('保存失败');
+      setMessage('Error: 保存失败 - ' + error.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const configLabels = {
-    refund_deadline_days: '退款截止天数',
-    default_group_target_count: '拼团最少人数',
-    group_discount_rate: '拼团折扣率',
-    loyalty_discount_rate: '老用户折扣率',
-    max_enrollments_per_session: '每班最大报名人数'
-  };
-
-  if (loading) return <div>加载中...</div>;
+  if (loading) return <div className="loading">加载中...</div>;
 
   return (
-    <div className="settings-page">
-      <h1>系统设置</h1>
-
-      <div className="settings-card">
-        <h2>退款设置</h2>
-        <div className="setting-item">
-          <label>退款截止天数（开课前N天可退款）</label>
-          <input
-            type="number"
-            value={editedValues.refund_deadline_days || ''}
-            onChange={e => handleChange('refund_deadline_days', e.target.value)}
-          />
-          <span className="hint">用户在开课前 {editedValues.refund_deadline_days} 天内可以无条件退款</span>
-        </div>
+    <div className="settings-management">
+      <div className="management-header">
+        <h2>⚙️ 系统设置</h2>
+        <button onClick={handleSave} className="btn-primary" disabled={saving}>
+          {saving ? '保存中...' : '💾 保存设置'}
+        </button>
       </div>
 
-      <div className="settings-card">
-        <h2>拼团设置</h2>
-        <div className="setting-item">
-          <label>拼团最少人数</label>
-          <input
-            type="number"
-            value={editedValues.default_group_target_count || ''}
-            onChange={e => handleChange('default_group_target_count', e.target.value)}
-          />
+      <div className="settings-grid">
+        {/* 退款设置 */}
+        <div className="settings-card">
+          <h3>💰 退款设置</h3>
+          <div className="setting-item">
+            <label>退款截止天数（开课前N天可退款）</label>
+            <input
+              type="number"
+              value={editedValues.refund_deadline_days || ''}
+              onChange={e => handleChange('refund_deadline_days', e.target.value)}
+            />
+            <span className="hint">
+              用户在开课前 {editedValues.refund_deadline_days || 'N'} 天内可以申请退款
+            </span>
+          </div>
         </div>
-        <div className="setting-item">
-          <label>拼团折扣率</label>
-          <input
-            type="number"
-            step="0.01"
-            value={editedValues.group_discount_rate || ''}
-            onChange={e => handleChange('group_discount_rate', e.target.value)}
-          />
-          <span className="hint">0.1 = 10% 折扣</span>
+
+        {/* 拼团设置 */}
+        <div className="settings-card">
+          <h3>👥 拼团设置</h3>
+          <div className="setting-item">
+            <label>拼团默认人数</label>
+            <input
+              type="number"
+              value={editedValues.default_group_target_count || ''}
+              onChange={e => handleChange('default_group_target_count', e.target.value)}
+            />
+            <span className="hint">
+              新建拼团时的默认目标人数
+            </span>
+          </div>
+          <div className="setting-item">
+            <label>拼团折扣率</label>
+            <input
+              type="number"
+              step="0.01"
+              value={editedValues.group_discount_rate || ''}
+              onChange={e => handleChange('group_discount_rate', e.target.value)}
+            />
+            <span className="hint">
+              0.1 = 10% 折扣，每人节省 {((editedValues.group_discount_rate || 0) * 100).toFixed(0)}%
+            </span>
+          </div>
+        </div>
+
+        {/* 其他设置 */}
+        <div className="settings-card">
+          <h3>⭐ 其他设置</h3>
+          <div className="setting-item">
+            <label>老用户折扣率</label>
+            <input
+              type="number"
+              step="0.01"
+              value={editedValues.loyalty_discount_rate || ''}
+              onChange={e => handleChange('loyalty_discount_rate', e.target.value)}
+            />
+            <span className="hint">
+              回头客折扣 {((editedValues.loyalty_discount_rate || 0) * 100).toFixed(0)}%
+            </span>
+          </div>
         </div>
       </div>
-
-      <div className="settings-card">
-        <h2>其他设置</h2>
-        <div className="setting-item">
-          <label>老用户折扣率</label>
-          <input
-            type="number"
-            step="0.01"
-            value={editedValues.loyalty_discount_rate || ''}
-            onChange={e => handleChange('loyalty_discount_rate', e.target.value)}
-          />
-        </div>
-      </div>
-
-      <button
-        className="save-btn"
-        onClick={handleSave}
-        disabled={saving}
-      >
-        {saving ? '保存中...' : '保存设置'}
-      </button>
     </div>
   );
 }
