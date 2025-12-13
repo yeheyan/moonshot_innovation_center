@@ -1050,7 +1050,11 @@ function StudentDetails({ student, enrollments, onClose }) {
                 <div className="enrollment-details">
                   <span>Teacher: {enrollment.teachername}</span>
                   <span>Day: {enrollment.sessiondayofweek}</span>
-                  <span>Time: {enrollment.sessionstarttime} - {enrollment.sessionendtime}</span>
+                  <span>
+                    Period: {session.sessionstartdate ? new Date(session.sessionstartdate).toLocaleDateString('zh-CN') : '待定'}
+                    {' to '}
+                    {session.sessionenddate ? new Date(session.sessionenddate).toLocaleDateString('zh-CN') : '待定'}
+                  </span>
                 </div>
                 {enrollment.sessionstartdate && (
                   <p className="enrollment-date">
