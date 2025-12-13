@@ -118,7 +118,7 @@ function App() {
           {activeView === 'students' && <StudentsView />}
           {activeView === 'users' && <UsersView />}
           {activeView === 'enrollments' && <EnrollmentsView />}
-          {activeView === 'settings' && <Settings />}
+          {activeView === 'settings' && <SettingsView setMessage={setMessage} />}
         </div>
       </main>
     </div>
