@@ -335,10 +335,8 @@ exports.createEnrollment = async (req, res) => {
 // ============================================
 // PAYMENT CONFIRMATION (After WeChat Pay Success)
 // ============================================
-
 exports.confirmPayment = async (req, res) => {
     const client = await db.pool.connect();
-
     try {
         const { orderId, wechatTransactionId } = req.body;
 
@@ -351,21 +349,22 @@ exports.confirmPayment = async (req, res) => {
 
         await client.query('BEGIN');
 
-        // Update payment status
+        // Update payment status - 添加 wechat_transaction_id
         await client.query(
             `UPDATE payment
-       SET paymentstatus = 'completed',
-           paymentdate = NOW()
-       WHERE orderid = $1`,
-            [orderId]
+             SET paymentstatus = 'completed',
+                 paymentdate = NOW(),
+                 wechat_transaction_id = $2
+             WHERE orderid = $1`,
+            [orderId, wechatTransactionId || null]
         );
 
         // Update order status
         const orderResult = await client.query(
             `UPDATE order_transaction
-       SET orderstatus = 'paid'
-       WHERE orderid = $1
-       RETURNING group_id`,
+             SET orderstatus = 'paid'
+             WHERE orderid = $1
+             RETURNING group_id`,
             [orderId]
         );
 
@@ -401,17 +400,25 @@ exports.withdrawEnrollment = async (req, res) => {
 
     try {
         const { enrollmentId } = req.params;
+        const { reason } = req.body;
+
+        // 退款截止天数（开课前N天）
+        const REFUND_DEADLINE_DAYS = 7;  // 可以改成你需要的天数
 
         await client.query('BEGIN');
 
-        // Get enrollment info with session start date
-        const enrollment = await client.query(
-            `SELECT se.*, s.SessionStartDate, s.SessionName
-       FROM SessionEnrollment se
-       JOIN Session s ON se.SessionID = s.SessionID
-       WHERE se.EnrollmentID = $1`,
-            [enrollmentId]
-        );
+        // 获取报名、订单和课程信息
+        const enrollment = await client.query(`
+            SELECT se.*,
+                   ot.orderstatus, ot.ordertotal, ot.orderid,
+                   p.paymentid, p.payment_amount,
+                   s.sessionstartdate
+            FROM sessionenrollment se
+            LEFT JOIN order_transaction ot ON se.orderid = ot.orderid
+            LEFT JOIN payment p ON ot.orderid = p.orderid
+            LEFT JOIN session s ON se.sessionid = s.sessionid
+            WHERE se.enrollmentid = $1
+        `, [enrollmentId]);
 
         if (enrollment.rows.length === 0) {
             await client.query('ROLLBACK');
@@ -421,69 +428,116 @@ exports.withdrawEnrollment = async (req, res) => {
             });
         }
 
-        const { sessionid, enrollmentstatus, sessionstartdate, sessionname } = enrollment.rows[0];
+        const data = enrollment.rows[0];
+        const wasPaid = data.orderstatus === 'paid' || data.orderstatus === 'completed';
 
-        // Check if withdrawal is within deadline
-        const now = new Date();
-        const sessionStart = new Date(sessionstartdate);
-        const daysUntilSession = Math.ceil((sessionStart - now) / (1000 * 60 * 60 * 24));
+        // 检查是否在退款期限内
+        let canRefund = false;
+        let daysUntilStart = null;
 
-        if (daysUntilSession < WITHDRAWAL_DEADLINE_DAYS) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({
-                success: false,
-                error: `Cannot withdraw from "${sessionname}". Withdrawal deadline is ${WITHDRAWAL_DEADLINE_DAYS} days before session start. Only ${daysUntilSession} days remaining.`
-            });
+        if (data.sessionstartdate) {
+            const startDate = new Date(data.sessionstartdate);
+            const now = new Date();
+            const diffTime = startDate.getTime() - now.getTime();
+            daysUntilStart = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            canRefund = daysUntilStart >= REFUND_DEADLINE_DAYS;
+        } else {
+            // 没有开课日期，默认允许退款
+            canRefund = true;
         }
 
-        // Update enrollment status to withdrawn
+        // 更新报名状态为 withdrawn
         await client.query(
-            `UPDATE SessionEnrollment
-       SET EnrollmentStatus = 'withdrawn'
-       WHERE EnrollmentID = $1`,
+            `UPDATE sessionenrollment
+             SET enrollmentstatus = 'withdrawn'
+             WHERE enrollmentid = $1`,
             [enrollmentId]
         );
 
-        // If student was active, decrease count and promote from waitlist
-        if (enrollmentstatus === 'active') {
-            await client.query(
-                'UPDATE Session SET EnrolledCount = EnrolledCount - 1 WHERE SessionID = $1',
-                [sessionid]
-            );
+        // 根据支付状态和退款期限处理
+        let refundStatus = 'none';
+        let refundAmount = 0;
 
-            // Promote first waitlisted student
-            const waitlisted = await client.query(
-                `SELECT EnrollmentID FROM SessionEnrollment
-         WHERE SessionID = $1 AND EnrollmentStatus = 'waitlisted'
-         ORDER BY EnrollmentDate LIMIT 1`,
-                [sessionid]
-            );
+        if (data.orderid) {
+            if (wasPaid) {
+                if (canRefund) {
+                    // 在退款期限内 → 创建退款记录，自动批准
+                    refundAmount = data.payment_amount || data.ordertotal;
 
-            if (waitlisted.rows.length > 0) {
+                    if (data.paymentid) {
+                        await client.query(
+                            `INSERT INTO refund (payment_id, refund_amount, refund_reason, refund_status, created_at)
+                             VALUES ($1, $2, $3, 'approved', CURRENT_TIMESTAMP)`,
+                            [data.paymentid, refundAmount, reason || '用户在退款期限内取消']
+                        );
+                    }
+
+                    // 更新订单状态为已退款
+                    await client.query(
+                        `UPDATE order_transaction
+                         SET orderstatus = 'refunded'
+                         WHERE orderid = $1`,
+                        [data.orderid]
+                    );
+
+                    refundStatus = 'approved';
+
+                } else {
+                    // 超过退款期限 → 不退款，只取消报名
+                    await client.query(
+                        `UPDATE order_transaction
+                         SET orderstatus = 'cancelled_no_refund'
+                         WHERE orderid = $1`,
+                        [data.orderid]
+                    );
+
+                    refundStatus = 'not_eligible';
+                }
+            } else {
+                // 未支付 → 直接取消
                 await client.query(
-                    `UPDATE SessionEnrollment
-           SET EnrollmentStatus = 'active'
-           WHERE EnrollmentID = $1`,
-                    [waitlisted.rows[0].enrollmentid]
-                );
-
-                await client.query(
-                    'UPDATE Session SET EnrolledCount = EnrolledCount + 1 WHERE SessionID = $1',
-                    [sessionid]
+                    `UPDATE order_transaction
+                     SET orderstatus = 'cancelled'
+                     WHERE orderid = $1`,
+                    [data.orderid]
                 );
             }
         }
 
+        // 减少 session 的报名人数
+        await client.query(
+            `UPDATE session
+             SET enrolledcount = GREATEST(enrolledcount - 1, 0)
+             WHERE sessionid = $1`,
+            [data.sessionid]
+        );
+
         await client.query('COMMIT');
+
+        // 返回不同的消息
+        let message = '取消成功';
+        if (wasPaid) {
+            if (canRefund) {
+                message = `取消成功，退款 ¥${refundAmount} 将原路返回`;
+            } else {
+                message = `取消成功，但已超过退款期限（开课前${REFUND_DEADLINE_DAYS}天），无法退款`;
+            }
+        }
 
         res.json({
             success: true,
-            message: 'Successfully withdrawn from session'
+            message: message,
+            data: {
+                refundStatus: refundStatus,
+                refundAmount: refundAmount,
+                daysUntilStart: daysUntilStart,
+                refundDeadlineDays: REFUND_DEADLINE_DAYS
+            }
         });
 
     } catch (error) {
         await client.query('ROLLBACK');
-        console.error('Withdrawal error:', error);
+        console.error('Withdraw enrollment error:', error);
         res.status(500).json({
             success: false,
             error: error.message
