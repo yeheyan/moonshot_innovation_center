@@ -83,15 +83,16 @@ exports.getUserEnrollmentStats = async (req, res) => {
         const stats = await db.query(`
             SELECT
                 COUNT(*) FILTER (WHERE ot.orderstatus = 'pending') as unpaid,
-                COUNT(*) FILTER (WHERE ot.orderstatus = 'paid' AND s.sessionstartdate > CURRENT_DATE) as pending,
-                COUNT(*) FILTER (WHERE ot.orderstatus = 'paid' AND s.sessionstartdate <= CURRENT_DATE AND se.enrollmentstatus = 'active') as ongoing,
-                COUNT(*) FILTER (WHERE se.enrollmentstatus = 'completed') as completed,
+                COUNT(*) FILTER (WHERE ot.orderstatus IN ('paid', 'completed') AND s.sessionstartdate > CURRENT_DATE) as pending,
+                COUNT(*) FILTER (WHERE ot.orderstatus IN ('paid', 'completed') AND s.sessionstartdate <= CURRENT_DATE AND (s.sessionenddate IS NULL OR s.sessionenddate >= CURRENT_DATE)) as ongoing,
+                COUNT(*) FILTER (WHERE ot.orderstatus IN ('paid', 'completed') AND s.sessionenddate < CURRENT_DATE) as completed,
                 COUNT(*) as total
             FROM sessionenrollment se
             JOIN order_transaction ot ON se.orderid = ot.orderid
             JOIN session s ON se.sessionid = s.sessionid
             JOIN student st ON se.studentid = st.studentid
             WHERE st.userid = $1
+              AND se.enrollmentstatus != 'withdrawn'
         `, [userId]);
 
         res.json({
