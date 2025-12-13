@@ -765,7 +765,8 @@ function SessionForm({ session, teachers, onSubmit, onCancel }) {
     sessionDayOfWeek: session?.day_of_week || '',
     sessionStartTime: session?.start_time || '',
     sessionEndTime: session?.end_time || '',
-    sessionStartDate: session?.sessionstartdate?.split('T')[0] || ''
+    sessionStartDate: session?.sessionstartdate?.split('T')[0] || '',
+    sessionEndDate: session?.sessionenddate?.split('T')[0] || ''
   });
 
   const handleSubmit = (e) => {
@@ -848,6 +849,16 @@ function SessionForm({ session, teachers, onSubmit, onCancel }) {
               type="date"
               value={formData.sessionStartDate}
               onChange={(e) => setFormData({ ...formData, sessionStartDate: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>End Date *</label>
+            <input
+              type="date"
+              value={formData.sessionEndDate}
+              onChange={(e) => setFormData({ ...formData, sessionEndDate: e.target.value })}
               required
             />
           </div>
