@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import adminApi from './services/adminApi';
-import { set } from '../../../server';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
