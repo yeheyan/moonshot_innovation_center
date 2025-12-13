@@ -118,6 +118,8 @@ const courseRoutes = require('./routes/courses');
 const teacherRoutes = require('./routes/teachers');
 const adminStudentRoutes = require('./routes/adminStudents');
 const wechatAuthRoutes = require('./routes/wechatAuth');
+const orderRoutes = require('./routes/orders');
+app.use('/api/orders', orderRoutes);
 app.use('/api/auth', wechatAuthRoutes);
 // Apply rate limiting to auth routes
 app.use('/api/auth/login', authLimiter);
