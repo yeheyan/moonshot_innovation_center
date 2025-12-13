@@ -61,9 +61,9 @@ exports.addStudent = async (req, res) => {
 
         const result = await db.query(
             `INSERT INTO student (
-        userid, studentname, student_nickname, student_gender,
+        userid, studentname, studentnickname, studentgender,
         studentnationalid, studentbirthdate, studentgrade, studentschool,
-        student_phone, student_address
+        studentphone, studentaddress
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
             [userId, studentName, studentNickname || null, studentGender, studentNationalID,
