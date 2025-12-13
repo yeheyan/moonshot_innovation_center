@@ -295,3 +295,72 @@ exports.createManualRefund = async (req, res) => {
         client.release();
     }
 };
+
+// 更新退款状态（小程序调用微信退款后更新）
+exports.updateRefundStatus = async (req, res) => {
+    const client = await db.pool.connect();
+
+    try {
+        const { refundId } = req.params;
+        const { status, wechatRefundId } = req.body;
+
+        await client.query('BEGIN');
+
+        // 更新 refund 表
+        await client.query(
+            `UPDATE refund
+             SET refund_status = $1,
+                 wechat_refund_id = $2
+             WHERE refundid = $3`,
+            [status, wechatRefundId, refundId]
+        );
+
+        // 如果退款完成，更新 payment 和 order 状态
+        if (status === 'completed') {
+            const refundInfo = await client.query(
+                `SELECT r.payment_id, p.orderid
+                 FROM refund r
+                 JOIN payment p ON r.payment_id = p.paymentid
+                 WHERE r.refundid = $1`,
+                [refundId]
+            );
+
+            if (refundInfo.rows.length > 0) {
+                const { payment_id, orderid } = refundInfo.rows[0];
+
+                // 更新 payment 状态
+                await client.query(
+                    `UPDATE payment
+                     SET paymentstatus = 'refunded'
+                     WHERE paymentid = $1`,
+                    [payment_id]
+                );
+
+                // 更新 order 状态
+                await client.query(
+                    `UPDATE order_transaction
+                     SET orderstatus = 'refunded'
+                     WHERE orderid = $1`,
+                    [orderid]
+                );
+            }
+        }
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: 'Refund status updated'
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Update refund status error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        client.release();
+    }
+};
