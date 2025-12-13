@@ -133,6 +133,7 @@ exports.getUserEnrollments = async (req, res) => {
                 c.courseprice,
                 t.teachername,
                 st.studentname,
+                st.studentgrade,
                 ot.ordertotal,
                 ot.orderstatus,
                 p.paymentstatus
@@ -168,7 +169,7 @@ exports.getUserStudents = async (req, res) => {
         const { userId } = req.params;
 
         const result = await db.query(
-            `SELECT studentid, studentname, studentage, studentgender, notes, createdat
+            `SELECT studentid, studentname, studentage, studentgender, studentgrade, created_at
              FROM student
              WHERE userid = $1
              ORDER BY createdat DESC`,
