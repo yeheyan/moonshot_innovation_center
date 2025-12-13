@@ -402,16 +402,15 @@ exports.withdrawEnrollment = async (req, res) => {
         const { enrollmentId } = req.params;
         const { reason } = req.body;
 
-        // 退款截止天数（开课前N天）
-        const REFUND_DEADLINE_DAYS = 7;  // 可以改成你需要的天数
+        const REFUND_DEADLINE_DAYS = 7;
 
         await client.query('BEGIN');
 
-        // 获取报名、订单和课程信息
+        // 修正列名：paymentamount 而不是 payment_amount
         const enrollment = await client.query(`
             SELECT se.*,
                    ot.orderstatus, ot.ordertotal, ot.orderid,
-                   p.paymentid, p.payment_amount,
+                   p.paymentid, p.paymentamount, p.wechat_transaction_id,
                    s.sessionstartdate
             FROM sessionenrollment se
             LEFT JOIN order_transaction ot ON se.orderid = ot.orderid
@@ -431,22 +430,20 @@ exports.withdrawEnrollment = async (req, res) => {
         const data = enrollment.rows[0];
         const wasPaid = data.orderstatus === 'paid' || data.orderstatus === 'completed';
 
-        // 检查是否在退款期限内
+        // 检查退款期限
         let canRefund = false;
         let daysUntilStart = null;
 
         if (data.sessionstartdate) {
             const startDate = new Date(data.sessionstartdate);
             const now = new Date();
-            const diffTime = startDate.getTime() - now.getTime();
-            daysUntilStart = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            daysUntilStart = Math.ceil((startDate - now) / (1000 * 60 * 60 * 24));
             canRefund = daysUntilStart >= REFUND_DEADLINE_DAYS;
         } else {
-            // 没有开课日期，默认允许退款
             canRefund = true;
         }
 
-        // 更新报名状态为 withdrawn
+        // 更新报名状态
         await client.query(
             `UPDATE sessionenrollment
              SET enrollmentstatus = 'withdrawn'
@@ -454,47 +451,50 @@ exports.withdrawEnrollment = async (req, res) => {
             [enrollmentId]
         );
 
-        // 根据支付状态和退款期限处理
-        let refundStatus = 'none';
+        let refundId = null;
+        let needRefund = false;
         let refundAmount = 0;
+        let totalAmount = 0;
+        let message = '取消成功';
 
         if (data.orderid) {
-            if (wasPaid) {
-                if (canRefund) {
-                    // 在退款期限内 → 创建退款记录，自动批准
-                    refundAmount = data.payment_amount || data.ordertotal;
+            if (wasPaid && canRefund) {
+                // 使用正确的列名 paymentamount
+                refundAmount = parseFloat(data.paymentamount || data.ordertotal);
+                totalAmount = parseFloat(data.ordertotal);
+                needRefund = true;
 
-                    if (data.paymentid) {
-                        await client.query(
-                            `INSERT INTO refund (payment_id, refund_amount, refund_reason, refund_status, created_at)
-                             VALUES ($1, $2, $3, 'approved', CURRENT_TIMESTAMP)`,
-                            [data.paymentid, refundAmount, reason || '用户在退款期限内取消']
-                        );
-                    }
-
-                    // 更新订单状态为已退款
-                    await client.query(
-                        `UPDATE order_transaction
-                         SET orderstatus = 'refunded'
-                         WHERE orderid = $1`,
-                        [data.orderid]
+                // 创建退款记录
+                if (data.paymentid) {
+                    const refundResult = await client.query(
+                        `INSERT INTO refund (payment_id, refund_amount, refund_reason, refund_status, created_at)
+                         VALUES ($1, $2, $3, 'processing', CURRENT_TIMESTAMP)
+                         RETURNING refundid`,
+                        [data.paymentid, refundAmount, reason || '用户取消报名']
                     );
-
-                    refundStatus = 'approved';
-
-                } else {
-                    // 超过退款期限 → 不退款，只取消报名
-                    await client.query(
-                        `UPDATE order_transaction
-                         SET orderstatus = 'cancelled_no_refund'
-                         WHERE orderid = $1`,
-                        [data.orderid]
-                    );
-
-                    refundStatus = 'not_eligible';
+                    refundId = refundResult.rows[0].refundid;
                 }
+
+                // 更新订单状态
+                await client.query(
+                    `UPDATE order_transaction
+                     SET orderstatus = 'refund_processing'
+                     WHERE orderid = $1`,
+                    [data.orderid]
+                );
+
+                message = `取消成功，退款 ¥${refundAmount.toFixed(2)} 处理中`;
+
+            } else if (wasPaid && !canRefund) {
+                await client.query(
+                    `UPDATE order_transaction
+                     SET orderstatus = 'cancelled_no_refund'
+                     WHERE orderid = $1`,
+                    [data.orderid]
+                );
+                message = `取消成功，已超过退款期限（开课前${REFUND_DEADLINE_DAYS}天），无法退款`;
+
             } else {
-                // 未支付 → 直接取消
                 await client.query(
                     `UPDATE order_transaction
                      SET orderstatus = 'cancelled'
@@ -504,7 +504,7 @@ exports.withdrawEnrollment = async (req, res) => {
             }
         }
 
-        // 减少 session 的报名人数
+        // 减少报名人数
         await client.query(
             `UPDATE session
              SET enrolledcount = GREATEST(enrolledcount - 1, 0)
@@ -514,22 +514,15 @@ exports.withdrawEnrollment = async (req, res) => {
 
         await client.query('COMMIT');
 
-        // 返回不同的消息
-        let message = '取消成功';
-        if (wasPaid) {
-            if (canRefund) {
-                message = `取消成功，退款 ¥${refundAmount} 将原路返回`;
-            } else {
-                message = `取消成功，但已超过退款期限（开课前${REFUND_DEADLINE_DAYS}天），无法退款`;
-            }
-        }
-
         res.json({
             success: true,
             message: message,
             data: {
-                refundStatus: refundStatus,
+                needRefund: needRefund,
+                refundId: refundId,
                 refundAmount: refundAmount,
+                totalAmount: totalAmount,
+                wechatTransactionId: data.wechat_transaction_id,
                 daysUntilStart: daysUntilStart,
                 refundDeadlineDays: REFUND_DEADLINE_DAYS
             }
