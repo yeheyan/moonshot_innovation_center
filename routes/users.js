@@ -14,6 +14,9 @@ router.get('/:userId', userController.getUserProfile);
 // PUT /api/users/:userId/profile - Update user profile
 router.put('/:userId/profile', userController.updateUserProfile);
 
+// GET /api/users/:userId/enrollments - Get user's course enrollments
+router.get('/:userId/enrollments', userController.getUserEnrollments);
+
 // GET /api/users/:userId/enrollments/stats - Get user's enrollment statistics
 router.get('/:userId/enrollments/stats', userController.getUserEnrollmentStats);
 
