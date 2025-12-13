@@ -233,3 +233,36 @@ exports.getStudentEnrollments = async (req, res) => {
         });
     }
 };
+
+// 获取单个学员信息
+exports.getStudentById = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        const result = await db.query(
+            `SELECT studentid, studentname, studentgrade, studentgender, studentbirthdate, userid
+             FROM student
+             WHERE studentid = $1`,
+            [studentId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Student not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error('Get student by ID error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};

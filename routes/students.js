@@ -9,6 +9,9 @@ router.use(verifyToken);
 // GET /api/students/parent/:userId - Get all students for a parent
 router.get('/parent/:userId', studentController.getStudentsByParent);
 
+// GET /api/students/:studentId - Get single student info  ← 添加这行
+router.get('/:studentId', studentController.getStudentById);
+
 // POST /api/students/parent/:userId - Add a student under a parent
 router.post('/parent/:userId', studentController.addStudent);
 
