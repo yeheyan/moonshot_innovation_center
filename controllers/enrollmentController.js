@@ -1,6 +1,5 @@
 const db = require('../db/connection');
-
-const WITHDRAWAL_DEADLINE_DAYS = process.env.WITHDRAWAL_DEADLINE_DAYS || 7;
+const { getConfig } = require('../utils/configHelper');
 
 // ============================================
 // HELPER FUNCTIONS
@@ -13,12 +12,16 @@ function generateGroupCode() {
 
 // Check if user is eligible for loyalty discount
 async function checkLoyaltyDiscount(userId, client) {
+    // 从数据库获取老用户折扣率
+    const loyaltyDiscountRate = await getConfig('loyalty_discount_rate', 0.05);
+    const loyaltyPercentage = loyaltyDiscountRate * 100;  // 0.05 -> 5%
+
     const result = await client.query(
         `SELECT COUNT(DISTINCT se.sessionid) as completed_count
-     FROM sessionenrollment se
-     JOIN order_transaction ot ON se.orderid = ot.orderid
-     WHERE ot.userid = $1
-     AND ot.orderstatus = 'paid'`,
+         FROM sessionenrollment se
+         JOIN order_transaction ot ON se.orderid = ot.orderid
+         WHERE ot.userid = $1
+         AND ot.orderstatus = 'paid'`,
         [userId]
     );
 
@@ -27,7 +30,7 @@ async function checkLoyaltyDiscount(userId, client) {
     if (count >= 1) {
         return {
             eligible: true,
-            percentage: 5,
+            percentage: loyaltyPercentage,
             completedCourses: count
         };
     }
@@ -39,12 +42,17 @@ async function checkLoyaltyDiscount(userId, client) {
 async function createNewGroup(userId, client) {
     const groupCode = generateGroupCode();
 
+    // 从数据库获取默认拼团配置
+    const targetCount = await getConfig('default_group_target_count', 3);
+    const discountRate = await getConfig('group_discount_rate', 0.1);
+    const discountPercentage = discountRate * 100;  // 0.1 -> 10%
+
     const result = await client.query(
         `INSERT INTO enrollment_group
-     (group_code, created_by_user, target_count, discount_type, discount_value, current_count)
-     VALUES ($1, $2, 3, 'percentage', 10, 1)
-     RETURNING *`,
-        [groupCode, userId]
+         (group_code, created_by_user, target_count, discount_type, discount_value, current_count)
+         VALUES ($1, $2, $3, 'percentage', $4, 1)
+         RETURNING *`,
+        [groupCode, userId, targetCount, discountPercentage]
     );
 
     return result.rows[0];
@@ -54,9 +62,9 @@ async function createNewGroup(userId, client) {
 async function joinGroup(groupCode, client) {
     const group = await client.query(
         `SELECT * FROM enrollment_group
-     WHERE group_code = $1
-     AND status = 'active'
-     AND (expires_at IS NULL OR expires_at > NOW())`,
+         WHERE group_code = $1
+         AND status = 'active'
+         AND (expires_at IS NULL OR expires_at > NOW())`,
         [groupCode.toUpperCase()]
     );
 
@@ -82,17 +90,17 @@ async function joinGroup(groupCode, client) {
 // Get current group member count
 async function getGroupCount(groupId, client) {
     const result = await client.query(
-        'SELECT current_count FROM enrollment_group WHERE groupid = $1',
+        'SELECT current_count, target_count, discount_value FROM enrollment_group WHERE groupid = $1',
         [groupId]
     );
-    return result.rows[0]?.current_count || 0;
+    return result.rows[0] || { current_count: 0, target_count: 3, discount_value: 10 };
 }
 
 // Check if group is complete and process refunds
 async function checkAndProcessGroupDiscount(groupId, client) {
     const paidCount = await client.query(
         `SELECT COUNT(*) FROM order_transaction
-     WHERE group_id = $1 AND orderstatus = 'paid'`,
+         WHERE group_id = $1 AND orderstatus = 'paid'`,
         [groupId]
     );
 
@@ -111,9 +119,9 @@ async function checkAndProcessGroupDiscount(groupId, client) {
     if (count >= groupData.target_count && groupData.status === 'active') {
         const orders = await client.query(
             `SELECT ot.*, p.paymentid, p.paymentamount
-       FROM order_transaction ot
-       JOIN payment p ON ot.orderid = p.orderid
-       WHERE ot.group_id = $1 AND ot.orderstatus = 'paid'`,
+             FROM order_transaction ot
+             JOIN payment p ON ot.orderid = p.orderid
+             WHERE ot.group_id = $1 AND ot.orderstatus = 'paid'`,
             [groupId]
         );
 
@@ -130,14 +138,14 @@ async function checkAndProcessGroupDiscount(groupId, client) {
             // Create refund record
             await client.query(
                 `INSERT INTO refund (payment_id, refund_amount, refund_reason, refund_status)
-         VALUES ($1, $2, 'group_discount', 'pending')`,
+                 VALUES ($1, $2, 'group_discount', 'pending')`,
                 [order.paymentid, refundAmount]
             );
         }
 
         // Mark group as completed
         await client.query(
-            'UPDATE enrollment_group SET status = \'completed\' WHERE groupid = $1',
+            "UPDATE enrollment_group SET status = 'completed' WHERE groupid = $1",
             [groupId]
         );
 
@@ -188,9 +196,9 @@ exports.createEnrollment = async (req, res) => {
         // Get session and course info
         const sessionInfo = await client.query(
             `SELECT s.*, c.coursemaxenroll, c.courseprice, s.enrolledcount
-       FROM session s
-       JOIN course c ON s.courseid = c.courseid
-       WHERE s.sessionid = $1`,
+             FROM session s
+             JOIN course c ON s.courseid = c.courseid
+             WHERE s.sessionid = $1`,
             [sessionId]
         );
 
@@ -208,8 +216,8 @@ exports.createEnrollment = async (req, res) => {
         // Check duplicate enrollment
         const duplicate = await client.query(
             `SELECT * FROM sessionenrollment
-       WHERE studentid = $1 AND sessionid = $2
-       AND enrollmentstatus IN ('active', 'waitlisted')`,
+             WHERE studentid = $1 AND sessionid = $2
+             AND enrollmentstatus IN ('active', 'waitlisted')`,
             [studentId, sessionId]
         );
 
@@ -253,9 +261,9 @@ exports.createEnrollment = async (req, res) => {
         // Create order
         const order = await client.query(
             `INSERT INTO order_transaction
-       (userid, ordertotal, discountamount, orderstatus, group_id)
-       VALUES ($1, $2, $3, 'pending', $4)
-       RETURNING *`,
+             (userid, ordertotal, discountamount, orderstatus, group_id)
+             VALUES ($1, $2, $3, 'pending', $4)
+             RETURNING *`,
             [userId, finalPrice, totalDiscount, groupId]
         );
 
@@ -267,16 +275,16 @@ exports.createEnrollment = async (req, res) => {
         // Create enrollment
         const enrollment = await client.query(
             `INSERT INTO sessionenrollment (studentid, sessionid, orderid, enrollmentstatus, enrollmentdate)
-       VALUES ($1, $2, $3, $4, NOW())
-       RETURNING *`,
+             VALUES ($1, $2, $3, $4, NOW())
+             RETURNING *`,
             [studentId, sessionId, orderId, enrollmentStatus]
         );
 
         // Create payment record (pending until confirmed)
         const payment = await client.query(
             `INSERT INTO payment (orderid, paymentamount, paymentmethod, paymentstatus)
-       VALUES ($1, $2, $3, 'pending')
-       RETURNING *`,
+             VALUES ($1, $2, $3, 'pending')
+             RETURNING *`,
             [orderId, finalPrice, paymentMethod]
         );
 
@@ -293,14 +301,14 @@ exports.createEnrollment = async (req, res) => {
         // Prepare response with group info
         let groupInfo = null;
         if (groupId) {
-            const currentCount = await getGroupCount(groupId, client);
-            const refundPerPerson = originalPrice * 0.1;  // 10% refund when complete
+            const groupData = await getGroupCount(groupId, client);
+            const refundPerPerson = originalPrice * (groupData.discount_value / 100);
 
             groupInfo = {
                 code: newGroupCode || groupCode,
-                currentCount: currentCount,
-                targetCount: 3,
-                message: `已有${currentCount}人，还需${3 - currentCount}人。完成后每人返¥${refundPerPerson.toFixed(0)}`
+                currentCount: groupData.current_count,
+                targetCount: groupData.target_count,
+                message: `已有${groupData.current_count}人，还需${groupData.target_count - groupData.current_count}人。完成后每人返¥${refundPerPerson.toFixed(0)}`
             };
         }
 
@@ -333,7 +341,7 @@ exports.createEnrollment = async (req, res) => {
 };
 
 // ============================================
-// PAYMENT CONFIRMATION (After WeChat Pay Success)
+// PAYMENT CONFIRMATION
 // ============================================
 exports.confirmPayment = async (req, res) => {
     const client = await db.pool.connect();
@@ -349,7 +357,6 @@ exports.confirmPayment = async (req, res) => {
 
         await client.query('BEGIN');
 
-        // Update payment status - 添加 wechat_transaction_id
         await client.query(
             `UPDATE payment
              SET paymentstatus = 'completed',
@@ -359,7 +366,6 @@ exports.confirmPayment = async (req, res) => {
             [orderId, wechatTransactionId || null]
         );
 
-        // Update order status
         const orderResult = await client.query(
             `UPDATE order_transaction
              SET orderstatus = 'paid'
@@ -370,7 +376,6 @@ exports.confirmPayment = async (req, res) => {
 
         const groupId = orderResult.rows[0]?.group_id;
 
-        // If part of a group, check if group is complete
         if (groupId) {
             await checkAndProcessGroupDiscount(groupId, client);
         }
@@ -394,7 +399,9 @@ exports.confirmPayment = async (req, res) => {
     }
 };
 
-// Withdraw from enrollment (with deadline check)
+// ============================================
+// WITHDRAW ENROLLMENT
+// ============================================
 exports.withdrawEnrollment = async (req, res) => {
     const client = await db.pool.connect();
 
@@ -402,11 +409,11 @@ exports.withdrawEnrollment = async (req, res) => {
         const { enrollmentId } = req.params;
         const { reason } = req.body;
 
-        const REFUND_DEADLINE_DAYS = 7;
+        // 从数据库获取退款截止天数
+        const REFUND_DEADLINE_DAYS = await getConfig('refund_deadline_days', 7);
 
         await client.query('BEGIN');
 
-        // 修正列名：paymentamount 而不是 payment_amount
         const enrollment = await client.query(`
             SELECT se.*,
                    ot.orderstatus, ot.ordertotal, ot.orderid,
@@ -430,7 +437,6 @@ exports.withdrawEnrollment = async (req, res) => {
         const data = enrollment.rows[0];
         const wasPaid = data.orderstatus === 'paid' || data.orderstatus === 'completed';
 
-        // 检查退款期限
         let canRefund = false;
         let daysUntilStart = null;
 
@@ -443,7 +449,6 @@ exports.withdrawEnrollment = async (req, res) => {
             canRefund = true;
         }
 
-        // 更新报名状态
         await client.query(
             `UPDATE sessionenrollment
              SET enrollmentstatus = 'withdrawn'
@@ -459,12 +464,10 @@ exports.withdrawEnrollment = async (req, res) => {
 
         if (data.orderid) {
             if (wasPaid && canRefund) {
-                // 使用正确的列名 paymentamount
                 refundAmount = parseFloat(data.paymentamount || data.ordertotal);
                 totalAmount = parseFloat(data.ordertotal);
                 needRefund = true;
 
-                // 创建退款记录
                 if (data.paymentid) {
                     const refundResult = await client.query(
                         `INSERT INTO refund (payment_id, refund_amount, refund_reason, refund_status, created_at)
@@ -475,7 +478,6 @@ exports.withdrawEnrollment = async (req, res) => {
                     refundId = refundResult.rows[0].refundid;
                 }
 
-                // 更新订单状态
                 await client.query(
                     `UPDATE order_transaction
                      SET orderstatus = 'refund_processing'
@@ -504,7 +506,6 @@ exports.withdrawEnrollment = async (req, res) => {
             }
         }
 
-        // 减少报名人数
         await client.query(
             `UPDATE session
              SET enrolledcount = GREATEST(enrolledcount - 1, 0)
@@ -545,13 +546,13 @@ exports.getEnrollmentStats = async (req, res) => {
     try {
         const stats = await db.query(
             `SELECT
-        COUNT(*) as total_enrollments,
-        COUNT(*) FILTER (WHERE EnrollmentStatus = 'active') as active_enrollments,
-        COUNT(*) FILTER (WHERE EnrollmentStatus = 'waitlisted') as waitlisted,
-        COUNT(*) FILTER (WHERE EnrollmentStatus = 'withdrawn') as withdrawn,
-        COUNT(DISTINCT StudentID) as unique_students,
-        COUNT(DISTINCT SessionID) as sessions_with_enrollments
-       FROM SessionEnrollment`
+                COUNT(*) as total_enrollments,
+                COUNT(*) FILTER (WHERE EnrollmentStatus = 'active') as active_enrollments,
+                COUNT(*) FILTER (WHERE EnrollmentStatus = 'waitlisted') as waitlisted,
+                COUNT(*) FILTER (WHERE EnrollmentStatus = 'withdrawn') as withdrawn,
+                COUNT(DISTINCT StudentID) as unique_students,
+                COUNT(DISTINCT SessionID) as sessions_with_enrollments
+             FROM SessionEnrollment`
         );
 
         res.json({

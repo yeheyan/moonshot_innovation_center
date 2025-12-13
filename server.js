@@ -120,7 +120,8 @@ const adminStudentRoutes = require('./routes/adminStudents');
 const wechatAuthRoutes = require('./routes/wechatAuth');
 const orderRoutes = require('./routes/orders');
 const usersRoutes = require('./routes/users');
-
+const configRoutes = require('./routes/config');
+app.use('/api/config', configRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/auth', wechatAuthRoutes);
@@ -164,7 +165,8 @@ app.get('/api', (req, res) => {
             enrollments: '/api/enrollments',
             students: '/api/students',
             courses: '/api/courses',
-            teachers: '/api/teachers'
+            teachers: '/api/teachers',
+            users: '/api/users'
         }
     });
 });
