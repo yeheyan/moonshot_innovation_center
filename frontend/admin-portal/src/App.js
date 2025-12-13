@@ -738,6 +738,7 @@ function SessionsForCourse({ course, teachers, setMessage, onClose }) {
                   <span>Teacher: {session.teacher_name}</span>
                   <span>Day: {session.day_of_week}</span>
                   <span>Time: {session.start_time} - {session.end_time}</span>
+                  <span>Period: {session.sessionstartdate} to {session.sessionenddate}</span>
                   <span>Enrolled: {session.enrolled_count}/{course.coursemaxenroll}</span>
                 </div>
               </div>
