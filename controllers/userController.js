@@ -76,18 +76,20 @@ exports.updateUserProfile = async (req, res) => {
 };
 
 // Get user's enrollment stats
-exports.getUserEnrollmentStats = async (req, res) => {
+const getUserEnrollmentStats = async (req, res) => {
     try {
         const { userId } = req.params;
 
         const stats = await db.query(`
             SELECT
-                COUNT(*) FILTER (WHERE se.enrollmentstatus = 'active' AND ot.orderstatus = 'pending') as pending,
-                COUNT(*) FILTER (WHERE se.enrollmentstatus = 'active' AND ot.orderstatus = 'paid') as ongoing,
+                COUNT(*) FILTER (WHERE ot.orderstatus = 'pending') as unpaid,
+                COUNT(*) FILTER (WHERE ot.orderstatus = 'paid' AND s.sessionstartdate > CURRENT_DATE) as pending,
+                COUNT(*) FILTER (WHERE ot.orderstatus = 'paid' AND s.sessionstartdate <= CURRENT_DATE AND se.enrollmentstatus = 'active') as ongoing,
                 COUNT(*) FILTER (WHERE se.enrollmentstatus = 'completed') as completed,
                 COUNT(*) as total
             FROM sessionenrollment se
             JOIN order_transaction ot ON se.orderid = ot.orderid
+            JOIN session s ON se.sessionid = s.sessionid
             JOIN student st ON se.studentid = st.studentid
             WHERE st.userid = $1
         `, [userId]);
@@ -95,6 +97,7 @@ exports.getUserEnrollmentStats = async (req, res) => {
         res.json({
             success: true,
             data: {
+                unpaid: parseInt(stats.rows[0].unpaid) || 0,
                 pending: parseInt(stats.rows[0].pending) || 0,
                 ongoing: parseInt(stats.rows[0].ongoing) || 0,
                 completed: parseInt(stats.rows[0].completed) || 0,
