@@ -700,6 +700,12 @@ function SessionsForCourse({ course, teachers, setMessage, onClose }) {
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '待定';
+    const date = new Date(dateString);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
   return (
     <div className="sessions-panel">
       <div className="panel-header">
@@ -738,7 +744,7 @@ function SessionsForCourse({ course, teachers, setMessage, onClose }) {
                   <span>Teacher: {session.teacher_name}</span>
                   <span>Day: {session.day_of_week}</span>
                   <span>Time: {session.start_time} - {session.end_time}</span>
-                  <span>Period: {session.sessionstartdate} to {session.sessionenddate}</span>
+                  <span>Period: {formatDate(session.sessionstartdate)} to {formatDate(session.sessionenddate)}</span>
                   <span>Enrolled: {session.enrolled_count}/{course.coursemaxenroll}</span>
                 </div>
               </div>
@@ -1050,11 +1056,7 @@ function StudentDetails({ student, enrollments, onClose }) {
                 <div className="enrollment-details">
                   <span>Teacher: {enrollment.teachername}</span>
                   <span>Day: {enrollment.sessiondayofweek}</span>
-                  <span>
-                    Period: {session.sessionstartdate ? new Date(session.sessionstartdate).toLocaleDateString('zh-CN') : '待定'}
-                    {' to '}
-                    {session.sessionenddate ? new Date(session.sessionenddate).toLocaleDateString('zh-CN') : '待定'}
-                  </span>
+                  <span>Time: {enrollment.sessionstarttime} - {enrollment.sessionendtime}</span>
                 </div>
                 {enrollment.sessionstartdate && (
                   <p className="enrollment-date">
