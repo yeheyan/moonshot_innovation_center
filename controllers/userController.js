@@ -189,11 +189,3 @@ exports.getUserStudents = async (req, res) => {
         });
     }
 };
-
-module.exports = {
-    getUserProfile,
-    updateUserProfile,
-    getUserEnrollments,
-    getUserEnrollmentStats,
-    getUserStudents
-};
