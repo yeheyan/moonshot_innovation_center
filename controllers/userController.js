@@ -129,7 +129,6 @@ exports.getUserEnrollments = async (req, res) => {
                 s.sessionstarttime,
                 s.sessionendtime,
                 s.SessionStartDate as startdate,
-                s.SessionEndDate as enddate,
                 c.coursename,
                 c.courseprice,
                 t.teachername,
