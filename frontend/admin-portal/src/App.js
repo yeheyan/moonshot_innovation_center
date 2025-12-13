@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import adminApi from './services/adminApi';
+import { set } from '../../../server';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -82,6 +83,12 @@ function App() {
           >
             Enrollments
           </button>
+          <button
+            className={activeView === 'settings' ? 'active' : ''}
+            onClick={() => setActiveView('settings')}
+          >
+            Settings
+          </button>
         </nav>
 
         <button className="logout-btn" onClick={handleLogout}>
@@ -111,6 +118,7 @@ function App() {
           {activeView === 'students' && <StudentsView />}
           {activeView === 'users' && <UsersView />}
           {activeView === 'enrollments' && <EnrollmentsView />}
+          {activeView === 'settings' && <Settings />}
         </div>
       </main>
     </div>
@@ -125,7 +133,8 @@ function getViewTitle(view) {
     sessions: '📅 Session Management',
     students: '👨‍🎓 Student Management',
     users: '👥 Parent Accounts',
-    enrollments: '📋 Enrollment Management'
+    enrollments: '📋 Enrollment Management',
+    settings: '⚙️ Settings'
   };
   return titles[view] || 'Admin Portal';
 }
@@ -1617,6 +1626,134 @@ function TeacherForm({ teacher, onSubmit, onCancel }) {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+function Settings() {
+  const [configs, setConfigs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editedValues, setEditedValues] = useState({});
+
+  useEffect(() => {
+    loadConfigs();
+  }, []);
+
+  const loadConfigs = async () => {
+    try {
+      const response = await api.get('/config');
+      if (response.data.success) {
+        setConfigs(response.data.data);
+        // 初始化编辑值
+        const values = {};
+        response.data.data.forEach(c => {
+          values[c.config_key] = c.config_value;
+        });
+        setEditedValues(values);
+      }
+    } catch (error) {
+      console.error('Load configs error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (key, value) => {
+    setEditedValues(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const configsToUpdate = Object.keys(editedValues).map(key => ({
+        key,
+        value: editedValues[key]
+      }));
+
+      await api.put('/config', { configs: configsToUpdate });
+      alert('配置保存成功！');
+      loadConfigs();
+    } catch (error) {
+      console.error('Save configs error:', error);
+      alert('保存失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const configLabels = {
+    refund_deadline_days: '退款截止天数',
+    default_group_target_count: '拼团最少人数',
+    group_discount_rate: '拼团折扣率',
+    loyalty_discount_rate: '老用户折扣率',
+    max_enrollments_per_session: '每班最大报名人数'
+  };
+
+  if (loading) return <div>加载中...</div>;
+
+  return (
+    <div className="settings-page">
+      <h1>系统设置</h1>
+
+      <div className="settings-card">
+        <h2>退款设置</h2>
+        <div className="setting-item">
+          <label>退款截止天数（开课前N天可退款）</label>
+          <input
+            type="number"
+            value={editedValues.refund_deadline_days || ''}
+            onChange={e => handleChange('refund_deadline_days', e.target.value)}
+          />
+          <span className="hint">用户在开课前 {editedValues.refund_deadline_days} 天内可以无条件退款</span>
+        </div>
+      </div>
+
+      <div className="settings-card">
+        <h2>拼团设置</h2>
+        <div className="setting-item">
+          <label>拼团最少人数</label>
+          <input
+            type="number"
+            value={editedValues.default_group_target_count || ''}
+            onChange={e => handleChange('default_group_target_count', e.target.value)}
+          />
+        </div>
+        <div className="setting-item">
+          <label>拼团折扣率</label>
+          <input
+            type="number"
+            step="0.01"
+            value={editedValues.group_discount_rate || ''}
+            onChange={e => handleChange('group_discount_rate', e.target.value)}
+          />
+          <span className="hint">0.1 = 10% 折扣</span>
+        </div>
+      </div>
+
+      <div className="settings-card">
+        <h2>其他设置</h2>
+        <div className="setting-item">
+          <label>老用户折扣率</label>
+          <input
+            type="number"
+            step="0.01"
+            value={editedValues.loyalty_discount_rate || ''}
+            onChange={e => handleChange('loyalty_discount_rate', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <button
+        className="save-btn"
+        onClick={handleSave}
+        disabled={saving}
+      >
+        {saving ? '保存中...' : '保存设置'}
+      </button>
     </div>
   );
 }
