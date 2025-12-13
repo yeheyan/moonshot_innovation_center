@@ -4,6 +4,7 @@ const db = require('../db/connection');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 
 // Login or register with WeChat openid
+// Login or register with WeChat openid
 exports.wechatLogin = async (req, res) => {
     try {
         const { openid, nickName, avatarUrl } = req.body;
@@ -22,20 +23,21 @@ exports.wechatLogin = async (req, res) => {
         );
 
         if (user.rows.length === 0) {
-            // Create new user
+            // Create new user - 保存 nickName 和 avatarUrl
             user = await db.query(
-                `INSERT INTO user_account (username, wechat_openid, userphone)
-         VALUES ($1, $2, NULL)
-         RETURNING *`,
-                [nickName || '微信用户', openid]
+                `INSERT INTO user_account (username, wechat_openid, avatar_url, userphone)
+                 VALUES ($1, $2, $3, NULL)
+                 RETURNING *`,
+                [nickName || '微信用户', openid, avatarUrl || null]
             );
-            console.log('New WeChat user created');
+            console.log('New WeChat user created with name:', nickName);
         } else {
+            // Existing user - 只更新登录时间，保留已有资料
             user = await db.query(
                 `UPDATE user_account
-         SET last_login = CURRENT_TIMESTAMP
-         WHERE wechat_openid = $1
-         RETURNING *`,
+                 SET last_login = CURRENT_TIMESTAMP
+                 WHERE wechat_openid = $1
+                 RETURNING *`,
                 [openid]
             );
             console.log('WeChat user logged in, preserved existing profile');
@@ -51,7 +53,7 @@ exports.wechatLogin = async (req, res) => {
                 role: 'parent'
             },
             JWT_SECRET,
-            { expiresIn: '30d' }  // Longer expiry for WeChat
+            { expiresIn: '30d' }
         );
 
         res.json({
@@ -61,7 +63,8 @@ exports.wechatLogin = async (req, res) => {
                 user: {
                     userId: userData.userid,
                     userName: userData.username,
-                    wechatOpenid: openid
+                    avatarUrl: userData.avatar_url,  // 添加这行！
+                    phone: userData.userphone         // 添加这行！
                 },
                 token
             }
