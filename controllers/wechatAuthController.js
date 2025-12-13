@@ -29,14 +29,18 @@ exports.wechatLogin = async (req, res) => {
          RETURNING *`,
                 [nickName || '微信用户', openid]
             );
-
             console.log('New WeChat user created');
         } else {
-            // Update last login
-            await db.query(
-                'UPDATE user_account SET last_login = CURRENT_TIMESTAMP WHERE userid = $1',
-                [user.rows[0].userid]
+            // Update username AND last login (CHANGED)
+            user = await db.query(
+                `UPDATE user_account
+         SET username = COALESCE($1, username),
+             last_login = CURRENT_TIMESTAMP
+         WHERE wechat_openid = $2
+         RETURNING *`,
+                [nickName, openid]
             );
+            console.log('WeChat user logged in, updated name');
         }
 
         const userData = user.rows[0];
