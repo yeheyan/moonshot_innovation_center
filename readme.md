@@ -239,9 +239,6 @@ FRONTEND_URL=http://localhost:3000
 }
 ```
 
-## Team
-
-Changying Zhang & Yehe Yan
 
 ## License
 
