@@ -16,6 +16,7 @@ exports.getAvailableSessions = async (req, res) => {
         s.SessionEndDate as sessionenddate,
         s.EnrolledCount as enrolled_count,
         c.CourseName as course_name,
+        c.type as course_type,
         c.min_grade as min_grade,
         c.max_grade as max_grade,
         c.cover_image_url as cover_image_url,

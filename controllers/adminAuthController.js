@@ -44,9 +44,9 @@ const login = async (req, res) => {
             });
         }
 
-        // Update last login
+        // Update last login (lowercase table and column)
         await db.query(
-            'UPDATE Admin SET last_login = CURRENT_TIMESTAMP WHERE AdminID = $1',
+            'UPDATE admin SET last_login = CURRENT_TIMESTAMP WHERE adminid = $1',
             [admin.adminid]
         );
 
@@ -89,9 +89,9 @@ const login = async (req, res) => {
 const getCurrentAdmin = async (req, res) => {
     try {
         const result = await db.query(
-            `SELECT AdminID, AdminName, AdminEmail, AdminRole, last_login, created_at
-       FROM Admin
-       WHERE AdminID = $1`,
+            `SELECT adminid, adminname, adminemail, adminrole, last_login, created_at
+             FROM admin
+             WHERE adminid = $1`,
             [req.adminId]
         );
 
