@@ -408,6 +408,9 @@ function CoursesView({ setMessage }) {
 
             <div className="course-card-header">
               <h3>{course.coursename}</h3>
+              <span className={`type-badge ${course.type}`}>
+                {course.type === 'camp' ? '训练营' : '系统课'}
+              </span>
               <span className={`status-badge ${course.coursestatus}`}>
                 {course.coursestatus}
               </span>
@@ -475,6 +478,7 @@ function CourseForm({ course, onSubmit, onCancel }) {
     coursePrice: course?.courseprice || '',
     courseMaxEnroll: course?.coursemaxenroll || '',
     courseStatus: course?.coursestatus || 'active',
+    courseType: course?.type || 'system',
     minGrade: course?.min_grade || '',
     maxGrade: course?.max_grade || '',
     coverImageUrl: course?.cover_image_url || ''
@@ -629,6 +633,18 @@ function CourseForm({ course, onSubmit, onCancel }) {
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Course Type *</label>
+            <select
+              value={formData.courseType}
+              onChange={(e) => setFormData({ ...formData, courseType: e.target.value })}
+              required
+            >
+              <option value="system">系统课 (System)</option>
+              <option value="camp">训练营 (Camp)</option>
             </select>
           </div>
 

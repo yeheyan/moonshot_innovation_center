@@ -1341,19 +1341,24 @@ body {
   }
 }
 /* Add to admin-portal/src/App.css */
-
 .course-image-preview {
   width: 100%;
-  height: 150px;
+  height: 120px;
+  /* Fixed height */
   overflow: hidden;
-  border-radius: 8px 8px 0 0;
-  margin: -1.5rem -1.5rem 1rem -1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  /* Space below image */
+  background: #f7fafc;
+  /* Fallback color */
 }
 
 .course-image-preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Crop to fit */
+  display: block;
 }
 
 .course-grade-range {
