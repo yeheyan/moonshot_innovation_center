@@ -17,5 +17,4 @@ router.get('/refunds/pending', orderController.getPendingRefunds);
 
 router.post('/calculate', verifyToken, orderController.calculatePrice);
 
-
 module.exports = router;
