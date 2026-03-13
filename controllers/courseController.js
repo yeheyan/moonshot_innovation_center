@@ -60,7 +60,17 @@ exports.getCourseById = async (req, res) => {
 // Create new course
 exports.createCourse = async (req, res) => {
     try {
-        const { courseName, courseDescription, coursePrice, courseMaxEnroll, courseStatus, courseType } = req.body;
+        const {
+            courseName,
+            courseDescription,
+            coursePrice,
+            courseMaxEnroll,
+            courseStatus,
+            courseType,
+            minGrade,
+            maxGrade,
+            coverImageUrl
+        } = req.body;
 
         if (!courseName || !coursePrice || !courseMaxEnroll) {
             return res.status(400).json({
@@ -70,10 +80,29 @@ exports.createCourse = async (req, res) => {
         }
 
         const result = await db.query(
-            `INSERT INTO Course (CourseName, CourseDescription, CoursePrice, CourseMaxEnroll, CourseStatus, type)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-            [courseName, courseDescription || null, coursePrice, courseMaxEnroll, courseStatus || 'active', courseType || 'system']
+            `INSERT INTO Course (
+                CourseName,
+                CourseDescription,
+                CoursePrice,
+                CourseMaxEnroll,
+                CourseStatus,
+                type,
+                min_grade,
+                max_grade,
+                cover_image_url
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING *`,
+            [
+                courseName,
+                courseDescription || null,
+                coursePrice,
+                courseMaxEnroll,
+                courseStatus || 'active',
+                courseType || 'system',
+                minGrade || null,
+                maxGrade || null,
+                coverImageUrl || null
+            ]
         );
 
         res.status(201).json({
@@ -94,19 +123,45 @@ exports.createCourse = async (req, res) => {
 exports.updateCourse = async (req, res) => {
     try {
         const { courseId } = req.params;
-        const { courseName, courseDescription, coursePrice, courseMaxEnroll, courseStatus, courseType } = req.body;
+        const {
+            courseName,
+            courseDescription,
+            coursePrice,
+            courseMaxEnroll,
+            courseStatus,
+            courseType,
+            minGrade,      // Add this
+            maxGrade,      // Add this
+            coverImageUrl  // Add this too if not already
+        } = req.body;
+
+        console.log('Update request body:', req.body);  // Debug
 
         const result = await db.query(
             `UPDATE Course SET
-        CourseName = COALESCE($1, CourseName),
-        CourseDescription = COALESCE($2, CourseDescription),
-        CoursePrice = COALESCE($3, CoursePrice),
-        CourseMaxEnroll = COALESCE($4, CourseMaxEnroll),
-        CourseStatus = COALESCE($5, CourseStatus),
-        type = COALESCE($6, type)
-      WHERE CourseID = $7
-      RETURNING *`,
-            [courseName, courseDescription, coursePrice, courseMaxEnroll, courseStatus, courseType, courseId]
+                CourseName = COALESCE($1, CourseName),
+                CourseDescription = COALESCE($2, CourseDescription),
+                CoursePrice = COALESCE($3, CoursePrice),
+                CourseMaxEnroll = COALESCE($4, CourseMaxEnroll),
+                CourseStatus = COALESCE($5, CourseStatus),
+                type = COALESCE($6, type),
+                min_grade = COALESCE($7, min_grade),
+                max_grade = COALESCE($8, max_grade),
+                cover_image_url = COALESCE($9, cover_image_url)
+            WHERE CourseID = $10
+            RETURNING *`,
+            [
+                courseName,
+                courseDescription,
+                coursePrice,
+                courseMaxEnroll,
+                courseStatus,
+                courseType,
+                minGrade,
+                maxGrade,
+                coverImageUrl,
+                courseId
+            ]
         );
 
         if (result.rows.length === 0) {
