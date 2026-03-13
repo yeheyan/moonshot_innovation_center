@@ -144,10 +144,11 @@ exports.createSession = async (req, res) => {
             sessionDayOfWeek,
             sessionStartTime,
             sessionEndTime,
-            sessionStartDate
+            sessionStartDate,
+            sessionEndDate
         } = req.body;
 
-        if (!courseId || !teacherId || !sessionName || !sessionDayOfWeek || !sessionStartTime || !sessionEndTime || !sessionStartDate) {
+        if (!courseId || !teacherId || !sessionName || !sessionDayOfWeek || !sessionStartTime || !sessionEndTime || !sessionStartDate || !sessionEndDate) {
             return res.status(400).json({
                 success: false,
                 error: 'All fields are required'
@@ -156,11 +157,20 @@ exports.createSession = async (req, res) => {
 
         const result = await db.query(
             `INSERT INTO Session (
-        CourseID, TeacherID, SessionName, SessionDayOfWeek,
-        SessionStartTime, SessionEndTime, SessionStartDate, EnrolledCount
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
-      RETURNING *`,
-            [courseId, teacherId, sessionName, sessionDayOfWeek, sessionStartTime, sessionEndTime, sessionStartDate]
+                CourseID, TeacherID, SessionName, SessionDayOfWeek,
+                SessionStartTime, SessionEndTime, SessionStartDate, SessionEndDate, EnrolledCount
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+            RETURNING *`,
+            [
+                courseId,
+                teacherId,
+                sessionName,
+                sessionDayOfWeek,
+                sessionStartTime,
+                sessionEndTime,
+                sessionStartDate,
+                sessionEndDate
+            ]
         );
 
         res.status(201).json({
@@ -180,19 +190,35 @@ exports.createSession = async (req, res) => {
 exports.updateSession = async (req, res) => {
     try {
         const { sessionId } = req.params;
-        const { sessionName, sessionDayOfWeek, sessionStartTime, sessionEndTime, sessionStartDate, teacherId } = req.body;
+        const {
+            sessionName,
+            sessionDayOfWeek,
+            sessionStartTime,
+            sessionEndTime,
+            sessionStartDate,
+            sessionEndDate,
+            teacherId } = req.body;
 
         const result = await db.query(
             `UPDATE Session SET
-        SessionName = COALESCE($1, SessionName),
-        SessionDayOfWeek = COALESCE($2, SessionDayOfWeek),
-        SessionStartTime = COALESCE($3, SessionStartTime),
-        SessionEndTime = COALESCE($4, SessionEndTime),
-        SessionStartDate = COALESCE($5, SessionStartDate),
-        TeacherID = COALESCE($6, TeacherID)
-      WHERE SessionID = $7
-      RETURNING *`,
-            [sessionName, sessionDayOfWeek, sessionStartTime, sessionEndTime, sessionStartDate, teacherId, sessionId]
+                SessionName = COALESCE($1, SessionName),
+                SessionDayOfWeek = COALESCE($2, SessionDayOfWeek),
+                SessionStartTime = COALESCE($3, SessionStartTime),
+                SessionEndTime = COALESCE($4, SessionEndTime),
+                SessionStartDate = COALESCE($5, SessionStartDate),
+                SessionEndDate = COALESCE($6, SessionEndDate),
+                TeacherID = COALESCE($7, TeacherID)
+            WHERE SessionID = $8
+            RETURNING *`,
+            [
+                sessionName,
+                sessionDayOfWeek,
+                sessionStartTime,
+                sessionEndTime,
+                sessionStartDate,
+                sessionEndDate,
+                teacherId,
+                sessionId]
         );
 
         if (result.rows.length === 0) {
