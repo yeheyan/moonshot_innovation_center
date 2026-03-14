@@ -156,77 +156,53 @@ async function checkAndProcessGroupDiscount(groupId, client) {
 // ============================================
 // MAIN ENROLLMENT FUNCTION
 // ============================================
-
 exports.createEnrollment = async (req, res) => {
     const client = await db.pool.connect();
 
     try {
-        const {
-            sessionId,
-            studentId,
-            paymentMethod,
-            groupCode,
-            createGroup
-        } = req.body;
+        const { sessionId, studentId, paymentMethod, groupCode, createGroup } = req.body;
 
         if (!sessionId || !studentId || !paymentMethod) {
-            return res.status(400).json({
-                success: false,
-                error: 'Session ID, Student ID, and Payment Method are required'
-            });
+            return res.status(400).json({ success: false, error: 'Session ID, Student ID, and Payment Method are required' });
         }
 
-        // Get userId from student
         const studentInfo = await client.query(
-            'SELECT userid FROM student WHERE studentid = $1',
-            [studentId]
+            'SELECT userid FROM student WHERE studentid = $1', [studentId]
         );
-
         if (studentInfo.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Student not found'
-            });
+            return res.status(404).json({ success: false, error: 'Student not found' });
         }
-
         const userId = studentInfo.rows[0].userid;
 
         await client.query('BEGIN');
 
-        // Get session and course info
         const sessionInfo = await client.query(
             `SELECT s.*, c.coursemaxenroll, c.courseprice, s.enrolledcount
-             FROM session s
-             JOIN course c ON s.courseid = c.courseid
+             FROM session s JOIN course c ON s.courseid = c.courseid
              WHERE s.sessionid = $1`,
             [sessionId]
         );
-
         if (sessionInfo.rows.length === 0) {
             await client.query('ROLLBACK');
-            return res.status(404).json({
-                success: false,
-                error: 'Session not found'
-            });
+            return res.status(404).json({ success: false, error: 'Session not found' });
         }
 
         const { coursemaxenroll, courseprice, enrolledcount } = sessionInfo.rows[0];
         const originalPrice = parseFloat(courseprice);
 
-        // Check duplicate enrollment
+        // Block duplicate: only check active/waitlisted with a PAID order
+        // Also block if there's already a pending enrollment to prevent double-submits
         const duplicate = await client.query(
-            `SELECT * FROM sessionenrollment
-             WHERE studentid = $1 AND sessionid = $2
-             AND enrollmentstatus IN ('active', 'waitlisted')`,
+            `SELECT se.* FROM sessionenrollment se
+             JOIN order_transaction ot ON se.orderid = ot.orderid
+             WHERE se.studentid = $1 AND se.sessionid = $2
+             AND se.enrollmentstatus IN ('active', 'waitlisted', 'pending')
+             AND ot.orderstatus IN ('paid', 'pending')`,
             [studentId, sessionId]
         );
-
         if (duplicate.rows.length > 0) {
             await client.query('ROLLBACK');
-            return res.status(400).json({
-                success: false,
-                error: 'Student is already enrolled in this session'
-            });
+            return res.status(400).json({ success: false, error: 'Student is already enrolled or has a pending order for this session' });
         }
 
         // Calculate discounts
@@ -235,75 +211,53 @@ exports.createEnrollment = async (req, res) => {
         let newGroupCode = null;
         let loyaltyInfo = null;
 
-        // 1. Check loyalty discount (automatic for returning customers)
         const loyalty = await checkLoyaltyDiscount(userId, client);
         if (loyalty.eligible) {
-            const loyaltyDiscount = originalPrice * (loyalty.percentage / 100);
-            totalDiscount += loyaltyDiscount;
+            totalDiscount += originalPrice * (loyalty.percentage / 100);
             loyaltyInfo = loyalty;
-            console.log(`Loyalty discount applied: ${loyalty.percentage}% = ¥${loyaltyDiscount}`);
         }
 
-        // 2. Handle group discount
         if (groupCode) {
             const group = await joinGroup(groupCode, client);
             groupId = group.groupid;
-            console.log(`Joined group: ${groupCode}`);
         } else if (createGroup) {
             const newGroup = await createNewGroup(userId, client);
             groupId = newGroup.groupid;
             newGroupCode = newGroup.group_code;
-            console.log(`Created new group: ${newGroupCode}`);
         }
 
         const finalPrice = originalPrice - totalDiscount;
 
         // Create order
         const order = await client.query(
-            `INSERT INTO order_transaction
-             (userid, ordertotal, discountamount, orderstatus, group_id)
-             VALUES ($1, $2, $3, 'pending', $4)
-             RETURNING *`,
+            `INSERT INTO order_transaction (userid, ordertotal, discountamount, orderstatus, group_id)
+             VALUES ($1, $2, $3, 'pending', $4) RETURNING *`,
             [userId, finalPrice, totalDiscount, groupId]
         );
-
         const orderId = order.rows[0].orderid;
 
-        // Determine enrollment status
-        const enrollmentStatus = enrolledcount < coursemaxenroll ? 'active' : 'waitlisted';
-
-        // Create enrollment
+        // ✅ FIX: enrollment starts as 'pending', NOT 'active'
+        // enrolledcount is NOT incremented here — happens in confirmPayment
+        const wouldBeWaitlisted = enrolledcount >= coursemaxenroll;
         const enrollment = await client.query(
             `INSERT INTO sessionenrollment (studentid, sessionid, orderid, enrollmentstatus, enrollmentdate)
-             VALUES ($1, $2, $3, $4, NOW())
-             RETURNING *`,
-            [studentId, sessionId, orderId, enrollmentStatus]
+             VALUES ($1, $2, $3, 'pending', NOW()) RETURNING *`,
+            [studentId, sessionId, orderId]
+            // 'pending' always — confirmPayment will resolve to 'active' or 'waitlisted'
         );
 
-        // Create payment record (pending until confirmed)
         const payment = await client.query(
             `INSERT INTO payment (orderid, paymentamount, paymentmethod, paymentstatus)
-             VALUES ($1, $2, $3, 'pending')
-             RETURNING *`,
+             VALUES ($1, $2, $3, 'pending') RETURNING *`,
             [orderId, finalPrice, paymentMethod]
         );
 
-        // Update enrolled count if active
-        if (enrollmentStatus === 'active') {
-            await client.query(
-                'UPDATE session SET enrolledcount = enrolledcount + 1 WHERE sessionid = $1',
-                [sessionId]
-            );
-        }
-
         await client.query('COMMIT');
 
-        // Prepare response with group info
         let groupInfo = null;
         if (groupId) {
             const groupData = await getGroupCount(groupId, client);
             const refundPerPerson = originalPrice * (groupData.discount_value / 100);
-
             groupInfo = {
                 code: newGroupCode || groupCode,
                 currentCount: groupData.current_count,
@@ -315,26 +269,24 @@ exports.createEnrollment = async (req, res) => {
         res.status(201).json({
             success: true,
             data: {
-                orderId: orderId,
+                orderId,
                 enrollmentId: enrollment.rows[0].enrollmentid,
                 paymentId: payment.rows[0].paymentid,
-                originalPrice: originalPrice,
+                originalPrice,
                 discountAmount: totalDiscount,
-                finalPrice: finalPrice,
+                finalPrice,
                 loyaltyDiscount: loyaltyInfo,
-                groupInfo: groupInfo,
-                enrollmentStatus: enrollmentStatus
+                groupInfo,
+                enrollmentStatus: 'pending',      // always pending until paid
+                wouldBeWaitlisted                  // hint to UI: will be waitlisted after payment
             },
-            message: 'Order created successfully'
+            message: 'Order created. Please complete payment.'
         });
 
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Enrollment error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     } finally {
         client.release();
     }
@@ -349,51 +301,87 @@ exports.confirmPayment = async (req, res) => {
         const { orderId, wechatTransactionId } = req.body;
 
         if (!orderId) {
-            return res.status(400).json({
-                success: false,
-                error: 'Order ID is required'
-            });
+            return res.status(400).json({ success: false, error: 'Order ID is required' });
         }
 
         await client.query('BEGIN');
 
+        // Lock the order row
+        const orderCheck = await client.query(
+            `SELECT ot.*, se.enrollmentid, se.sessionid, se.studentid
+             FROM order_transaction ot
+             JOIN sessionenrollment se ON se.orderid = ot.orderid
+             WHERE ot.orderid = $1
+             FOR UPDATE`,
+            [orderId]
+        );
+
+        if (orderCheck.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, error: 'Order not found' });
+        }
+
+        const orderData = orderCheck.rows[0];
+
+        if (orderData.orderstatus !== 'pending') {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ success: false, error: `Order is already ${orderData.orderstatus}` });
+        }
+
+        // ✅ NOW check real-time capacity (re-read with lock)
+        const sessionInfo = await client.query(
+            `SELECT s.enrolledcount, c.coursemaxenroll
+             FROM session s JOIN course c ON s.courseid = c.courseid
+             WHERE s.sessionid = $1
+             FOR UPDATE`,
+            [orderData.sessionid]
+        );
+        const { enrolledcount, coursemaxenroll } = sessionInfo.rows[0];
+        const finalStatus = enrolledcount < coursemaxenroll ? 'active' : 'waitlisted';
+
+        // Confirm payment
         await client.query(
-            `UPDATE payment
-             SET paymentstatus = 'completed',
-                 paymentdate = NOW(),
-                 wechat_transaction_id = $2
+            `UPDATE payment SET paymentstatus = 'completed', paymentdate = NOW(), wechat_transaction_id = $2
              WHERE orderid = $1`,
             [orderId, wechatTransactionId || null]
         );
 
-        const orderResult = await client.query(
-            `UPDATE order_transaction
-             SET orderstatus = 'paid'
-             WHERE orderid = $1
-             RETURNING group_id`,
+        await client.query(
+            `UPDATE order_transaction SET orderstatus = 'paid' WHERE orderid = $1`,
             [orderId]
         );
 
-        const groupId = orderResult.rows[0]?.group_id;
+        // ✅ NOW set enrollment to active/waitlisted
+        await client.query(
+            `UPDATE sessionenrollment SET enrollmentstatus = $1 WHERE orderid = $2`,
+            [finalStatus, orderId]
+        );
 
-        if (groupId) {
-            await checkAndProcessGroupDiscount(groupId, client);
+        // ✅ NOW increment enrolledcount (only for active, not waitlisted)
+        if (finalStatus === 'active') {
+            await client.query(
+                'UPDATE session SET enrolledcount = enrolledcount + 1 WHERE sessionid = $1',
+                [orderData.sessionid]
+            );
+        }
+
+        // Handle group discount check
+        if (orderData.group_id) {
+            await checkAndProcessGroupDiscount(orderData.group_id, client);
         }
 
         await client.query('COMMIT');
 
         res.json({
             success: true,
-            message: 'Payment confirmed successfully'
+            message: 'Payment confirmed successfully',
+            data: { enrollmentStatus: finalStatus }
         });
 
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Payment confirmation error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     } finally {
         client.release();
     }

@@ -1293,7 +1293,8 @@ function EnrollmentsView({ setMessage }) {
     total: 0,
     active: 0,
     waitlisted: 0,
-    withdrawn: 0
+    withdrawn: 0,
+    pending: 0
   });
 
   useEffect(() => {
@@ -1311,12 +1312,12 @@ function EnrollmentsView({ setMessage }) {
       const data = response.data.data;
       setEnrollments(data);
 
-      // Calculate stats
       setStats({
         total: data.length,
         active: data.filter(e => e.enrollmentstatus === 'active').length,
         waitlisted: data.filter(e => e.enrollmentstatus === 'waitlisted').length,
-        withdrawn: data.filter(e => e.enrollmentstatus === 'withdrawn').length
+        withdrawn: data.filter(e => e.enrollmentstatus === 'withdrawn').length,
+        pending: data.filter(e => e.enrollmentstatus === 'pending').length
       });
     } catch (error) {
       setMessage('Error fetching enrollments: ' + error.message);
@@ -1328,12 +1329,10 @@ function EnrollmentsView({ setMessage }) {
   const applyFilters = () => {
     let filtered = enrollments;
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(e => e.enrollmentstatus === statusFilter);
     }
 
-    // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(e =>
@@ -1382,6 +1381,10 @@ function EnrollmentsView({ setMessage }) {
           <h4>Withdrawn</h4>
           <p className="stat-number">{stats.withdrawn}</p>
         </div>
+        <div className="stat-card-small pending">
+          <h4>Pending</h4>
+          <p className="stat-number">{stats.pending}</p>
+        </div>
       </div>
 
       {/* Filters */}
@@ -1393,6 +1396,7 @@ function EnrollmentsView({ setMessage }) {
             <option value="active">Active</option>
             <option value="waitlisted">Waitlisted</option>
             <option value="withdrawn">Withdrawn</option>
+            <option value="pending">Pending</option>
           </select>
         </div>
 
@@ -1435,9 +1439,7 @@ function EnrollmentsView({ setMessage }) {
             ) : (
               filteredEnrollments.map(enrollment => (
                 <tr key={enrollment.enrollmentid}>
-                  <td>
-                    <strong>{enrollment.studentname}</strong>
-                  </td>
+                  <td><strong>{enrollment.studentname}</strong></td>
                   <td>
                     <div>{enrollment.parentname}</div>
                     <div className="sub-info">{enrollment.parentphone}</div>
@@ -1453,23 +1455,27 @@ function EnrollmentsView({ setMessage }) {
                       {enrollment.sessionstarttime} - {enrollment.sessionendtime}
                     </div>
                   </td>
-                  <td>
-                    {new Date(enrollment.enrollmentdate).toLocaleDateString()}
-                  </td>
+                  <td>{new Date(enrollment.enrollmentdate).toLocaleDateString()}</td>
                   <td>
                     <span className={`status-badge ${enrollment.enrollmentstatus}`}>
                       {enrollment.enrollmentstatus}
                     </span>
                   </td>
                   <td>
+                    {/* Pending enrollments shouldn't be manually overridden to active —
+                        that would bypass payment. Admin can only cancel them. */}
                     <select
                       value={enrollment.enrollmentstatus}
                       onChange={(e) => handleStatusChange(enrollment.enrollmentid, e.target.value)}
                       className="status-select"
+                      disabled={enrollment.enrollmentstatus === 'pending'}
                     >
                       <option value="active">Active</option>
                       <option value="waitlisted">Waitlisted</option>
                       <option value="withdrawn">Withdrawn</option>
+                      {enrollment.enrollmentstatus === 'pending' && (
+                        <option value="pending">Pending (awaiting payment)</option>
+                      )}
                     </select>
                   </td>
                 </tr>

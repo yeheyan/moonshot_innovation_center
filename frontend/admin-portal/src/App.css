@@ -1382,3 +1382,12 @@ body {
   color: #2d3748;
   font-weight: 500;
 }
+
+.status-badge.pending {
+  background: #f0a500;
+  color: white;
+}
+
+.stat-card-small.pending {
+  border-left: 4px solid #f0a500;
+}
