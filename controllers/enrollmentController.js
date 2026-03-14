@@ -339,7 +339,7 @@ exports.confirmPayment = async (req, res) => {
         const { enrolledcount, coursemaxenroll } = sessionInfo.rows[0];
         const finalStatus = enrolledcount < coursemaxenroll ? 'active' : 'waitlisted';
 
-        // Confirm payment — store transaction_id if available, outTradeNo always for reconciliation
+        // Confirm payment — store transaction_id and/or outTradeNo for reconciliation
         await client.query(
             `UPDATE payment SET paymentstatus = 'completed', paymentdate = NOW(),
              wechat_transaction_id = COALESCE($2, wechat_transaction_id),
@@ -407,7 +407,7 @@ exports.withdrawEnrollment = async (req, res) => {
         const enrollment = await client.query(`
             SELECT se.*,
                    ot.orderstatus, ot.ordertotal, ot.orderid,
-                   p.paymentid, p.paymentamount, p.wechat_transaction_id,
+                   p.paymentid, p.paymentamount, p.wechat_transaction_id, p.out_trade_no,
                    s.sessionstartdate
             FROM sessionenrollment se
             LEFT JOIN order_transaction ot ON se.orderid = ot.orderid
@@ -514,6 +514,7 @@ exports.withdrawEnrollment = async (req, res) => {
                 refundAmount: refundAmount,
                 totalAmount: totalAmount,
                 wechatTransactionId: data.wechat_transaction_id,
+                outTradeNo: data.out_trade_no,
                 daysUntilStart: daysUntilStart,
                 refundDeadlineDays: REFUND_DEADLINE_DAYS
             }
