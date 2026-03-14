@@ -298,7 +298,7 @@ exports.createEnrollment = async (req, res) => {
 exports.confirmPayment = async (req, res) => {
     const client = await db.pool.connect();
     try {
-        const { orderId, wechatTransactionId } = req.body;
+        const { orderId, wechatTransactionId, outTradeNo } = req.body;
 
         if (!orderId) {
             return res.status(400).json({ success: false, error: 'Order ID is required' });
@@ -339,11 +339,13 @@ exports.confirmPayment = async (req, res) => {
         const { enrolledcount, coursemaxenroll } = sessionInfo.rows[0];
         const finalStatus = enrolledcount < coursemaxenroll ? 'active' : 'waitlisted';
 
-        // Confirm payment
+        // Confirm payment — store transaction_id if available, outTradeNo always for reconciliation
         await client.query(
-            `UPDATE payment SET paymentstatus = 'completed', paymentdate = NOW(), wechat_transaction_id = $2
+            `UPDATE payment SET paymentstatus = 'completed', paymentdate = NOW(),
+             wechat_transaction_id = COALESCE($2, wechat_transaction_id),
+             out_trade_no = COALESCE($3, out_trade_no)
              WHERE orderid = $1`,
-            [orderId, wechatTransactionId || null]
+            [orderId, wechatTransactionId || null, outTradeNo || null]
         );
 
         await client.query(
